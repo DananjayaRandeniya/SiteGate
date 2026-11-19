@@ -1,0 +1,18 @@
+node_modules
+dist
+.env
+coverage
+
+# Keep the example settings file, ignore other env files
+.env.*
+!.env.example
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
