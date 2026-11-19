@@ -28,3 +28,16 @@ Replace `access-service` with the service you want to run, then open its port in
 npm run test       # unit tests
 npm run test:e2e   # end-to-end tests
 ```
+
+## Infrastructure
+
+From the repo root, start Kafka and MongoDB:
+
+```bash
+docker compose up -d
+```
+
+- Kafka UI: http://localhost:8080
+- Mongo Express: http://localhost:8081
+
+Stop everything with `docker compose down`.
