@@ -1,10 +1,23 @@
 import { Module } from '@nestjs/common';
-import { AuditAlertServiceController } from './audit-alert-service.controller';
-import { AuditAlertServiceService } from './audit-alert-service.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { envValidationSchema } from './config/env.validation';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  imports: [],
-  controllers: [AuditAlertServiceController],
-  providers: [AuditAlertServiceService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: 'apps/audit-alert-service/.env',
+      validationSchema: envValidationSchema,
+    }),
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.getOrThrow<string>('MONGO_URI'),
+      }),
+    }),
+    HealthModule,
+  ],
 })
 export class AuditAlertServiceModule {}
