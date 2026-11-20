@@ -12,7 +12,7 @@ Shared code lives in `libs/contracts`.
 
 ## Setup
 
-Requires Node.js 20.
+Requires Node.js 26.
 
 ```bash
 cd backend
