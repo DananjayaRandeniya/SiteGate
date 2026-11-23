@@ -14,6 +14,7 @@ import { CORRELATION_ID_HEADER } from './request-logging.middleware';
 const domainStatus = {
   WORKER_NOT_FOUND: HttpStatus.NOT_FOUND,
   CREDENTIAL_IN_USE: HttpStatus.CONFLICT,
+  CONTRACTOR_NOT_FOUND: HttpStatus.NOT_FOUND,
 };
 
 function clientMessage(exception: HttpException): string {
