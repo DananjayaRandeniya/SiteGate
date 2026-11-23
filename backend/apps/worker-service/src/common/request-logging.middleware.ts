@@ -7,6 +7,12 @@ export const CORRELATION_ID_HEADER = 'x-correlation-id';
 const uuidV4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export function responseCorrelationId(response: Response) {
+  const correlationId = response.get(CORRELATION_ID_HEADER) ?? randomUUID();
+  response.set(CORRELATION_ID_HEADER, correlationId);
+  return correlationId;
+}
+
 export function requestLogging(
   request: Request,
   response: Response,

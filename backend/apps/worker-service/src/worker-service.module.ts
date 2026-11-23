@@ -11,6 +11,8 @@ import { WorkerServiceController } from './worker-service.controller';
 import { WorkerServiceService } from './worker-service.service';
 import { WorkerEventsProducer } from './workers/events/worker-events.producer';
 import { Worker, WorkerSchema } from './workers/schemas/worker.schema';
+import { WorkerCredentialsController } from './workers/worker-credentials.controller';
+import { WorkerCredentialsService } from './workers/worker-credentials.service';
 import { WorkersController } from './workers/workers.controller';
 import { WorkersRepository } from './workers/workers.repository';
 import { WorkersService } from './workers/workers.service';
@@ -33,10 +35,16 @@ import { WorkersService } from './workers/workers.service';
     ContractorsModule,
     TerminusModule,
   ],
-  controllers: [WorkerServiceController, HealthController, WorkersController],
+  controllers: [
+    WorkerServiceController,
+    HealthController,
+    WorkersController,
+    WorkerCredentialsController,
+  ],
   providers: [
     WorkerServiceService,
     WorkersService,
+    WorkerCredentialsService,
     WorkersRepository,
     WorkerEventsProducer,
     { provide: APP_FILTER, useClass: HttpErrorFilter },
