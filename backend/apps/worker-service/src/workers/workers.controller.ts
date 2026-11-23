@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -13,6 +16,7 @@ import type { Response } from 'express';
 import { CORRELATION_ID_HEADER } from '../common/request-logging.middleware';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto, WorkerIdParams } from './dto/update-worker.dto';
+import { WorkerSiteDto } from './dto/worker-site.dto';
 import { WorkerAdminGuard } from './worker-admin.guard';
 import { WorkersService } from './workers.service';
 
@@ -42,6 +46,37 @@ export class WorkersController {
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.workers.update(id, input, responseCorrelationId(response));
+  }
+
+  @Post(':id/sites')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(WorkerAdminGuard)
+  assignSite(
+    @Param() { id }: WorkerIdParams,
+    @Body() { siteId }: WorkerSiteDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.workers.changeSiteAssignment(
+      id,
+      siteId,
+      'assign',
+      responseCorrelationId(response),
+    );
+  }
+
+  @Delete(':id/sites')
+  @UseGuards(WorkerAdminGuard)
+  unassignSite(
+    @Param() { id }: WorkerIdParams,
+    @Body() { siteId }: WorkerSiteDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.workers.changeSiteAssignment(
+      id,
+      siteId,
+      'unassign',
+      responseCorrelationId(response),
+    );
   }
 }
 
