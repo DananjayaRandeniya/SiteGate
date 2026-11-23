@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { EventEnvelope } from '@app/contracts';
 import { AuditRepository } from './audit.repository';
+import type { AuditQueryDto } from './dto/audit-query.dto';
 
 export interface KafkaMeta {
   topic: string;
@@ -40,5 +41,14 @@ export class AuditService {
       // Not an error: the same event arrived twice
       this.logger.debug(`Duplicate event ignored: ${event.eventId}`);
     }
+  }
+    async getWorkerAudit(workerId: string, query: AuditQueryDto) {
+    const { page, pageSize } = query;
+    const { items, total } = await this.repository.findByWorker(
+      workerId,
+      (page - 1) * pageSize,
+      pageSize,
+    );
+    return { data: items, page, pageSize, total };
   }
 }
