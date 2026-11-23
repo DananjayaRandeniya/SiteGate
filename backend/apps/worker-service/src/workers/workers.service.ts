@@ -12,6 +12,7 @@ import { workerLogger } from '../common/logger';
 import { ContractorsService } from '../contractors/contractors.service';
 import type { CreateWorkerDto } from './dto/create-worker.dto';
 import type { DeactivateWorkerDto } from './dto/deactivate-worker.dto';
+import type { ListWorkersQueryDto } from './dto/list-workers-query.dto';
 import type { UpdateWorkerDto } from './dto/update-worker.dto';
 import { WorkerEventsProducer } from './events/worker-events.producer';
 import type { Worker } from './schemas/worker.schema';
@@ -91,6 +92,26 @@ export class WorkersService {
     }
 
     return result;
+  }
+
+  async list(query: ListWorkersQueryDto) {
+    const { workers, total } = await this.workers.listVisible(query);
+    const names = await this.contractors.namesByIds(
+      workers.map(({ contractorId }) => contractorId),
+    );
+    return {
+      items: workers.map((worker) => {
+        const profile = workerProfile(worker);
+        return {
+          ...profile,
+          contractorName: names.get(profile.contractorId) ?? null,
+        };
+      }),
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    };
   }
 
   async get(id: string) {

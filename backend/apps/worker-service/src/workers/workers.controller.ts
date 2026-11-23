@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import type { Response } from 'express';
 import { CORRELATION_ID_HEADER } from '../common/request-logging.middleware';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { DeactivateWorkerDto } from './dto/deactivate-worker.dto';
+import { ListWorkersQueryDto } from './dto/list-workers-query.dto';
 import { UpdateWorkerDto, WorkerIdParams } from './dto/update-worker.dto';
 import { WorkerSiteDto } from './dto/worker-site.dto';
 import { WorkerAdminGuard } from './worker-admin.guard';
@@ -32,6 +34,11 @@ export class WorkersController {
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.workers.register(input, responseCorrelationId(response));
+  }
+
+  @Get()
+  list(@Query() query: ListWorkersQueryDto) {
+    return this.workers.list(query);
   }
 
   @Get(':id')
