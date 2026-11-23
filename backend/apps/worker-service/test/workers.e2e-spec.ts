@@ -1,7 +1,8 @@
-import { Topics } from '@app/contracts';
+import { DeactivationReason, Topics, WorkerStatus } from '@app/contracts';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getModelToken } from '@nestjs/mongoose';
+import type { OpenAPIObject, OperationObject } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { Types } from 'mongoose';
 import type { Model } from 'mongoose';
@@ -9,11 +10,29 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { requestLogging } from '../src/common/request-logging.middleware';
 import { Contractor } from '../src/contractors/schemas/contractor.schema';
+import { setupWorkerApiDocs } from '../src/openapi/worker-api-docs';
 import { WorkerServiceModule } from '../src/worker-service.module';
 import { WorkerEventsProducer } from '../src/workers/events/worker-events.producer';
 import { Worker } from '../src/workers/schemas/worker.schema';
 
-describe('Worker registration (e2e)', () => {
+function documentedBody(
+  operation: OperationObject | undefined,
+  name: string,
+): Record<string, unknown> {
+  const body = operation?.requestBody;
+  const example =
+    body && 'content' in body
+      ? body.content['application/json']?.examples?.[name]
+      : undefined;
+  const value: unknown =
+    example && 'value' in example ? example.value : undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`Swagger request example ${name} is missing`);
+  }
+  return { ...value };
+}
+
+describe('Worker registration and deactivation (e2e)', () => {
   let app: INestApplication<App>;
   let workers: Model<Worker>;
   let contractorId: string;
@@ -33,6 +52,7 @@ describe('Worker registration (e2e)', () => {
       .compile();
     app = moduleFixture.createNestApplication();
     app.use(requestLogging);
+    setupWorkerApiDocs(app);
     app.get(ConfigService).set('WORKER_ADMIN_TOKEN', adminToken);
     await app.init();
 
@@ -83,6 +103,95 @@ describe('Worker registration (e2e)', () => {
       .set('x-correlation-id', correlationId)
       .send(input);
   }
+
+  it('serves Swagger UI and describes the admin operations and error responses', async () => {
+    const http = request(app.getHttpServer());
+    await http
+      .get('/docs')
+      .expect(200)
+      .expect('Content-Type', /html/)
+      .expect(/Swagger UI/);
+    const document = await http.get('/docs-json').expect(200);
+    const openApi = document.body as OpenAPIObject;
+    expect(openApi.components?.securitySchemes?.bearer).toMatchObject({
+      type: 'http',
+      scheme: 'bearer',
+    });
+    expect(openApi.components?.schemas?.CreateWorkerDto).toMatchObject({
+      required: [
+        'fullName',
+        'contractorId',
+        'credentialNumber',
+        'inductionDate',
+        'safetyTicketExpiry',
+      ],
+      properties: {
+        inductionDate: { type: 'string', format: 'date' },
+        assignedSiteIds: { type: 'array' },
+      },
+    });
+    expect(openApi.paths[path]?.post).toMatchObject({
+      security: [{ bearer: [] }],
+      responses: {
+        '201': {
+          content: {
+            'application/json': { example: { status: WorkerStatus.ACTIVE } },
+          },
+        },
+        '400': {
+          content: { 'application/json': { example: { code: 'BAD_REQUEST' } } },
+        },
+        '401': {
+          content: {
+            'application/json': { example: { code: 'UNAUTHORIZED' } },
+          },
+        },
+        '404': {
+          content: {
+            'application/json': { example: { code: 'CONTRACTOR_NOT_FOUND' } },
+          },
+        },
+        '409': {
+          content: {
+            'application/json': {
+              example: { statusCode: 409, code: 'CREDENTIAL_IN_USE' },
+            },
+          },
+        },
+        '503': {
+          content: {
+            'application/json': {
+              example: { code: 'REGISTRATION_EVENT_UNCONFIRMED' },
+            },
+          },
+        },
+      },
+    });
+    expect(openApi.paths['/workers/{id}/deactivate']?.patch).toMatchObject({
+      security: [{ bearer: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true }],
+      requestBody: { required: false },
+      responses: {
+        '200': {
+          content: {
+            'application/json': { example: { status: WorkerStatus.INACTIVE } },
+          },
+        },
+        '404': {
+          content: {
+            'application/json': { example: { code: 'WORKER_NOT_FOUND' } },
+          },
+        },
+        '503': {
+          content: {
+            'application/json': {
+              example: { code: 'WORKER_DEACTIVATION_EVENT_UNCONFIRMED' },
+            },
+          },
+        },
+      },
+    });
+  });
 
   it('rejects missing or incorrect admin authorization before writing or publishing', async () => {
     const input = validInput('REGISTRATION-UNAUTHORIZED');
@@ -145,11 +254,36 @@ describe('Worker registration (e2e)', () => {
     );
   });
 
-  it('rejects a duplicate credential without publishing again', async () => {
-    const input = validInput('C-1001');
+  it('runs WS-01 registration, duplicate rejection, and deactivation using the documented requests', async () => {
+    const http = request(app.getHttpServer());
+    const document = await http.get('/docs-json').expect(200);
+    const openApi = document.body as OpenAPIObject;
+    const example = documentedBody(openApi.paths[path]?.post, 'registration');
+    const credentialNumber = example.credentialNumber;
+    if (typeof credentialNumber !== 'string')
+      throw new Error(
+        'The Swagger registration example needs a credential number',
+      );
+    const input = { ...example, contractorId };
     const created = await register(input).expect(201);
-    expect(created.body).toMatchObject({ assignedSiteIds: [] });
-    publish.mockClear();
+    const initial = await workers
+      .findOne({ 'credentials.number': credentialNumber })
+      .orFail();
+    const id = initial._id.toString();
+    expect(initial.status).toBe(WorkerStatus.ACTIVE);
+    expect(created.body).toMatchObject({ id, status: WorkerStatus.ACTIVE });
+    expect(publish).toHaveBeenNthCalledWith(
+      1,
+      Topics.WORKER_CREATED,
+      expect.objectContaining({ workerId: id }),
+      correlationId,
+    );
+    expect(publish).toHaveBeenNthCalledWith(
+      2,
+      Topics.CREDENTIAL_ISSUED,
+      { workerId: id, credentialNumber },
+      correlationId,
+    );
 
     const duplicate = await register({
       ...input,
@@ -158,10 +292,35 @@ describe('Worker registration (e2e)', () => {
     expect(duplicate.body).toMatchObject({ code: 'CREDENTIAL_IN_USE' });
     expect(
       await workers.countDocuments({
-        'credentials.number': input.credentialNumber,
+        'credentials.number': credentialNumber,
       }),
     ).toBe(1);
-    expect(publish).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(2);
+
+    const deactivation = documentedBody(
+      openApi.paths['/workers/{id}/deactivate']?.patch,
+      'contractEnded',
+    );
+    await http
+      .patch(`${path}/${id}/deactivate`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('x-correlation-id', correlationId)
+      .send(deactivation)
+      .expect(200, { id, status: WorkerStatus.INACTIVE });
+    expect((await workers.findById(id).orFail()).status).toBe(
+      WorkerStatus.INACTIVE,
+    );
+    expect(publish).toHaveBeenCalledTimes(3);
+    expect(publish).toHaveBeenNthCalledWith(
+      3,
+      Topics.WORKER_DEACTIVATED,
+      {
+        workerId: id,
+        ...deactivation,
+        reason: DeactivationReason.CONTRACT_ENDED,
+      },
+      correlationId,
+    );
   });
 
   it('lets only one of two concurrent registrations use the same credential', async () => {
