@@ -7,8 +7,7 @@ import { AccessServiceController } from './access-service.controller';
 import { AccessServiceService } from './access-service.service';
 import { HealthController } from './health/health.controller';
 import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.module';
-
-
+import { WorkerEventsController } from './events/worker-events.controller';
 
 @Module({
   imports: [
@@ -18,6 +17,7 @@ import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.modul
       validationSchema: Joi.object({
         PORT: Joi.number().required(),
         MONGO_URI: Joi.string().required(),
+        KAFKA_BROKERS: Joi.string().required(),
       }),
     }),
     TerminusModule,
@@ -29,7 +29,7 @@ import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.modul
     }),
     WorkerSnapshotsModule
   ],
-  controllers: [AccessServiceController, HealthController],
+  controllers: [AccessServiceController, HealthController, WorkerEventsController],
   providers: [AccessServiceService],
 })
 export class AccessServiceModule {}
