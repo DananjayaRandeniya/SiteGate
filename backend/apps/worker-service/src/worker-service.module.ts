@@ -5,10 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TerminusModule } from '@nestjs/terminus';
 import { HttpErrorFilter } from './common/http-error.filter';
 import { envValidationSchema } from './config/env.validation';
-import {
-  Contractor,
-  ContractorSchema,
-} from './contractors/schemas/contractor.schema';
+import { ContractorsModule } from './contractors/contractors.module';
 import { HealthController } from './health/health.controller';
 import { WorkerServiceController } from './worker-service.controller';
 import { WorkerServiceService } from './worker-service.service';
@@ -28,10 +25,8 @@ import { Worker, WorkerSchema } from './workers/schemas/worker.schema';
         dbName: 'workers_db',
       }),
     }),
-    MongooseModule.forFeature([
-      { name: Contractor.name, schema: ContractorSchema },
-      { name: Worker.name, schema: WorkerSchema },
-    ]),
+    MongooseModule.forFeature([{ name: Worker.name, schema: WorkerSchema }]),
+    ContractorsModule,
     TerminusModule,
   ],
   controllers: [WorkerServiceController, HealthController],
