@@ -1,0 +1,29 @@
+name: Worker Service image
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/worker-service-image.yml
+      - backend/.dockerignore
+      - backend/apps/worker-service/**
+      - backend/libs/contracts/**
+      - backend/nest-cli.json
+      - backend/package*.json
+      - backend/tsconfig.json
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Worker Service
+        run: docker build -f backend/apps/worker-service/Dockerfile -t sitegate-worker-service:ci backend
+      - name: Check image size and runtime user
+        run: |
+          size=$(docker image inspect sitegate-worker-service:ci --format '{{.Size}}')
+          echo "Worker Service image size: $size bytes"
+          test "$size" -lt 250000000
+          test "$(docker run --rm --entrypoint id sitegate-worker-service:ci -u)" -ne 0

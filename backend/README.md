@@ -57,7 +57,7 @@ npm run test:e2e   # end-to-end tests
 
 ## Infrastructure
 
-From the repo root, start Kafka and MongoDB:
+From `backend`, start Kafka and MongoDB:
 
 ```bash
 docker compose up -d
@@ -67,3 +67,19 @@ docker compose up -d
 - Mongo Express: http://localhost:8081
 
 Stop everything with `docker compose down`.
+
+## Run Worker Service in Docker
+
+From `backend`, build and start Worker Service with its Kafka and MongoDB
+containers:
+
+```powershell
+docker compose up -d --build worker-service
+```
+
+Open [Worker Service health](http://localhost:3001/health) or
+[Worker Service Swagger](http://localhost:3001/docs). If port 3001 is already
+in use, set `$env:WORKER_HOST_PORT = '3101'` before starting, then open port 3101.
+Compose reads the local Worker Service `.env` for admin credentials.
+MongoDB keeps its data in the `mongo_data` volume across normal restarts.
+To stop Worker Service and its dependencies, run `docker compose --profile worker down`.
