@@ -28,4 +28,23 @@ export class AuditRepository {
       throw err; // a real problem, so don't hide it
     }
   }
+    async findByWorker(
+    workerId: string,
+    skip: number,
+    limit: number,
+  ): Promise<{ items: AuditEvent[]; total: number }> {
+    const filter = { workerId };
+    const [items, total] = await Promise.all([
+      this.model
+        .find(filter)
+        .sort({ occurredAt: -1, _id: -1 }) // newest first; _id breaks ties
+        .skip(skip)
+        .limit(limit)
+        .select('-__v')
+        .lean<AuditEvent[]>()
+        .exec(),
+      this.model.countDocuments(filter).exec(),
+    ]);
+    return { items, total };
+  }
 }

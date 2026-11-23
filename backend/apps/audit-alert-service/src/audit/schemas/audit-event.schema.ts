@@ -24,4 +24,5 @@ export class AuditEvent {
 export const AuditEventSchema = SchemaFactory.createForClass(AuditEvent);
 
 // The duplicate check: MongoDB refuses a second record with the same eventId.
-AuditEventSchema.index({ eventId: 1 }, { unique: true });
+// Used by GET /workers/:id/audit: filter by worker, newest first
+AuditEventSchema.index({ workerId: 1, occurredAt: -1, _id: -1 });
