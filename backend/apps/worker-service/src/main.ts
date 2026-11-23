@@ -8,6 +8,7 @@ import { Worker } from './workers/schemas/worker.schema';
 
 async function bootstrap() {
   const app = await NestFactory.create(WorkerServiceModule);
+  app.enableShutdownHooks();
   app.use(requestLogging);
   const port = app.get(ConfigService).getOrThrow<number>('PORT');
   await app.get<Model<Worker>>(getModelToken(Worker.name)).init();

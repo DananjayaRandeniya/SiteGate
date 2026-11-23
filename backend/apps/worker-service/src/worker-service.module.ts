@@ -9,7 +9,11 @@ import { ContractorsModule } from './contractors/contractors.module';
 import { HealthController } from './health/health.controller';
 import { WorkerServiceController } from './worker-service.controller';
 import { WorkerServiceService } from './worker-service.service';
+import { WorkerEventsProducer } from './workers/events/worker-events.producer';
 import { Worker, WorkerSchema } from './workers/schemas/worker.schema';
+import { WorkersController } from './workers/workers.controller';
+import { WorkersRepository } from './workers/workers.repository';
+import { WorkersService } from './workers/workers.service';
 
 @Module({
   imports: [
@@ -29,9 +33,12 @@ import { Worker, WorkerSchema } from './workers/schemas/worker.schema';
     ContractorsModule,
     TerminusModule,
   ],
-  controllers: [WorkerServiceController, HealthController],
+  controllers: [WorkerServiceController, HealthController, WorkersController],
   providers: [
     WorkerServiceService,
+    WorkersService,
+    WorkersRepository,
+    WorkerEventsProducer,
     { provide: APP_FILTER, useClass: HttpErrorFilter },
     {
       provide: APP_PIPE,

@@ -15,6 +15,7 @@ const domainStatus = {
   WORKER_NOT_FOUND: HttpStatus.NOT_FOUND,
   CREDENTIAL_IN_USE: HttpStatus.CONFLICT,
   CONTRACTOR_NOT_FOUND: HttpStatus.NOT_FOUND,
+  REGISTRATION_EVENT_UNCONFIRMED: HttpStatus.SERVICE_UNAVAILABLE,
 };
 
 function clientMessage(exception: HttpException): string {
