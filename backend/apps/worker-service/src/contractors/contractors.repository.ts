@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import type { Model } from 'mongoose';
+import type { Model, Types } from 'mongoose';
 import { Contractor } from './schemas/contractor.schema';
 
 @Injectable()
@@ -20,6 +20,13 @@ export class ContractorsRepository {
 
   findActiveById(id: string) {
     return this.contractors.findOne({ _id: id, deletedAt: null }).exec();
+  }
+
+  findNamesByIds(ids: Types.ObjectId[]) {
+    return this.contractors
+      .find({ _id: { $in: ids } })
+      .select('name')
+      .exec();
   }
 
   renameActive(id: string, name: string) {

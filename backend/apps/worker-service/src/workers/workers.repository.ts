@@ -1,9 +1,10 @@
 import { type DeactivationReason, WorkerStatus } from '@app/contracts';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { type Model, mongo, Types } from 'mongoose';
+import { type Model, mongo, type QueryFilter, Types } from 'mongoose';
 import { DomainError } from '../common/domain-error';
 import type { CreateWorkerDto } from './dto/create-worker.dto';
+import type { ListWorkersQueryDto } from './dto/list-workers-query.dto';
 import type { RevokeCredentialDto } from './dto/worker-credential.dto';
 import { Worker } from './schemas/worker.schema';
 
@@ -138,6 +139,33 @@ export class WorkersRepository {
 
   findVisibleById(id: string) {
     return this.workers.findOne({ _id: id, deletedAt: null }).exec();
+  }
+
+  async listVisible(query: ListWorkersQueryDto) {
+    const filter: QueryFilter<Worker> = { deletedAt: null };
+    if (query.status !== undefined) filter.status = query.status;
+    if (query.contractorId !== undefined)
+      filter.contractorId = new Types.ObjectId(query.contractorId);
+    if (query.siteId !== undefined) filter.assignedSiteIds = query.siteId;
+    if (query.search) {
+      const escaped = query.search.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
+      const text = new RegExp(escaped, 'i');
+      filter.$or = [
+        { fullName: text },
+        { credentials: { $elemMatch: { number: text, revokedAt: null } } },
+      ];
+    }
+
+    const [workers, total] = await Promise.all([
+      this.workers
+        .find(filter)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((query.page - 1) * query.limit)
+        .limit(query.limit)
+        .exec(),
+      this.workers.countDocuments(filter).exec(),
+    ]);
+    return { workers, total };
   }
 
   updateVisibleProfile(id: string, changes: WorkerProfileChanges) {

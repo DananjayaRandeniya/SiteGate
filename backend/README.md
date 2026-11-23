@@ -38,6 +38,12 @@ in the service logs. Before replaying anything, check the corresponding Kafka
 topics for that worker and correlation ID. Reconcile missing events with the
 team using the saved worker record.
 
+## List workers
+
+`GET /workers?page=1&limit=20` returns `items`, `page`, `limit`, `total`, and
+`totalPages`. Add `search` for a name or active credential number, or filter by
+`status`, `contractorId`, and `siteId`. Archived workers are excluded.
+
 ## Tests
 
 ```bash

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Types } from 'mongoose';
 import { DomainError } from '../common/domain-error';
 import { ContractorsRepository } from './contractors.repository';
 import type { ContractorDocument } from './schemas/contractor.schema';
@@ -27,6 +28,12 @@ export class ContractorsService {
 
   async get(id: string) {
     return toContractorSummary(await this.contractors.findActiveById(id));
+  }
+
+  async namesByIds(ids: Types.ObjectId[]) {
+    if (ids.length === 0) return new Map<string, string>();
+    const rows = await this.contractors.findNamesByIds(ids);
+    return new Map(rows.map(({ _id, name }) => [_id.toString(), name]));
   }
 
   async rename(id: string, name: string) {
