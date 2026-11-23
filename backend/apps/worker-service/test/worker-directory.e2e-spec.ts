@@ -47,7 +47,7 @@ describe('Worker directory (e2e)', () => {
     data: Partial<Worker> = {},
     createdAt = new Date('2026-11-19'),
   ) {
-    return workers.create({
+    const fixture = {
       fullName: 'Directory Test Worker',
       contractorId,
       inductionDate: new Date('2026-11-18'),
@@ -55,7 +55,8 @@ describe('Worker directory (e2e)', () => {
       assignedSiteIds: ['S-01'],
       createdAt,
       ...data,
-    });
+    } satisfies Partial<Worker> & { createdAt: Date };
+    return workers.create(fixture);
   }
 
   function list(query: Record<string, string | number>) {
@@ -234,7 +235,7 @@ describe('Worker directory (e2e)', () => {
     });
   });
 
-  it.each([
+  it.each<Record<string, string | number>>([
     { page: 0 },
     { page: '1e2' },
     { page: '9007199254740992' },
