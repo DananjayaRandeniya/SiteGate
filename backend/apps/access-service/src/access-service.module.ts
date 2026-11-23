@@ -6,6 +6,9 @@ import * as Joi from 'joi';
 import { AccessServiceController } from './access-service.controller';
 import { AccessServiceService } from './access-service.service';
 import { HealthController } from './health/health.controller';
+import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.module';
+
+
 
 @Module({
   imports: [
@@ -24,6 +27,7 @@ import { HealthController } from './health/health.controller';
         uri: config.getOrThrow<string>('MONGO_URI'),
       }),
     }),
+    WorkerSnapshotsModule
   ],
   controllers: [AccessServiceController, HealthController],
   providers: [AccessServiceService],
