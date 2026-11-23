@@ -12,63 +12,67 @@ import type {
   WorkerDeactivatedEvent,
   WorkerUpdatedEvent,
 } from '@app/contracts';
+import { AuditService } from '../audit/audit.service';
 
 @Controller()
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
-  
-  
-//   constructor() {
-//   this.logger.log('EventsController loaded');
-// }
 
-  // One handler per topic. For now each one only logs the event.
+  constructor(private readonly auditService: AuditService) {}
+
   @EventPattern(Topics.WORKER_CREATED)
   onWorkerCreated(@Payload() event: WorkerCreatedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.WORKER_UPDATED)
   onWorkerUpdated(@Payload() event: WorkerUpdatedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.WORKER_DEACTIVATED)
   onWorkerDeactivated(@Payload() event: WorkerDeactivatedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.CREDENTIAL_ISSUED)
   onCredentialIssued(@Payload() event: CredentialIssuedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.CREDENTIAL_REVOKED)
   onCredentialRevoked(@Payload() event: CredentialRevokedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.ACCESS_GRANTED)
   onAccessGranted(@Payload() event: AccessGrantedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.ACCESS_DENIED)
   onAccessDenied(@Payload() event: AccessDeniedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
   @EventPattern(Topics.ALERT_RAISED)
   onAlertRaised(@Payload() event: AlertRaisedEvent, @Ctx() ctx: unknown) {
-    this.logEvent(event, ctx);
+    return this.handle(event, ctx);
   }
 
-  private logEvent(event: EventEnvelope<string, unknown>, ctx: unknown) {
+  private async handle(event: EventEnvelope<string, unknown>, ctx: unknown) {
     const kafkaCtx = ctx as KafkaContext; // Nest passes a KafkaContext here
-    const key = kafkaCtx.getMessage().key?.toString();
+    const meta = {
+      topic: kafkaCtx.getTopic(),
+      partition: kafkaCtx.getPartition(),
+      offset: kafkaCtx.getMessage().offset,
+    };
+
     this.logger.log(
-      `topic=${kafkaCtx.getTopic()} partition=${kafkaCtx.getPartition()} key=${key} ` +
+      `topic=${meta.topic} partition=${meta.partition} offset=${meta.offset} ` +
         `eventId=${event.eventId} correlationId=${event.correlationId}`,
     );
+
+    await this.auditService.record(event, meta);
   }
 }
