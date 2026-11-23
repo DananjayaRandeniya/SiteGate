@@ -5,6 +5,13 @@ import { DomainError } from '../common/domain-error';
 import type { CreateWorkerDto } from './dto/create-worker.dto';
 import { Worker } from './schemas/worker.schema';
 
+export type WorkerProfileChanges = Partial<
+  Pick<
+    Worker,
+    'fullName' | 'contractorId' | 'inductionDate' | 'safetyTicketExpiry'
+  >
+>;
+
 @Injectable()
 export class WorkersRepository {
   constructor(
@@ -34,5 +41,24 @@ export class WorkersRepository {
       }
       throw error;
     }
+  }
+
+  findVisibleById(id: string) {
+    return this.workers.findOne({ _id: id, deletedAt: null }).exec();
+  }
+
+  updateVisibleProfile(id: string, changes: WorkerProfileChanges) {
+    const changedFields = Object.entries(changes).map(([field, value]) => ({
+      [field]: { $ne: value },
+    }));
+
+    // Return the profile at the time of the update so the event describes this write.
+    return this.workers
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null, $or: changedFields },
+        { $set: changes },
+        { returnDocument: 'before', runValidators: true },
+      )
+      .exec();
   }
 }
