@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { WorkerStatus } from '@app/contracts';
+import { RevokeReason, WorkerStatus } from '@app/contracts';
 import { Schema as MongooseSchema, Types } from 'mongoose';
 import { Contractor } from '../../contractors/schemas/contractor.schema';
 
@@ -13,6 +13,12 @@ class WorkerCredential {
 
   @Prop({ type: Date, default: null })
   revokedAt!: Date | null;
+
+  @Prop({ type: String, enum: Object.values(RevokeReason) })
+  revokeReason?: RevokeReason;
+
+  @Prop({ type: String })
+  revokeNote?: string;
 }
 
 const WorkerCredentialSchema = SchemaFactory.createForClass(WorkerCredential);

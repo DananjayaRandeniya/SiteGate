@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { type Model, mongo, Types } from 'mongoose';
 import { DomainError } from '../common/domain-error';
 import type { CreateWorkerDto } from './dto/create-worker.dto';
+import type { RevokeCredentialDto } from './dto/worker-credential.dto';
 import { Worker } from './schemas/worker.schema';
 
 export type WorkerProfileChanges = Partial<
@@ -18,6 +19,79 @@ export class WorkersRepository {
     @InjectModel(Worker.name) private readonly workers: Model<Worker>,
   ) {}
 
+  existsVisible(id: string) {
+    return this.workers.exists({ _id: id, deletedAt: null }).exec();
+  }
+
+  async issueCredential(id: string, credentialNumber: string, issuedAt: Date) {
+    try {
+      const result = await this.workers
+        .updateOne(
+          {
+            _id: id,
+            deletedAt: null,
+            credentials: { $not: { $elemMatch: { revokedAt: null } } },
+            'credentials.number': { $ne: credentialNumber },
+          },
+          {
+            $push: {
+              credentials: {
+                number: credentialNumber,
+                issuedAt,
+                revokedAt: null,
+              },
+            },
+          },
+          { runValidators: true },
+        )
+        .exec();
+      return result.modifiedCount === 1;
+    } catch (error) {
+      return this.throwCredentialWriteError(error);
+    }
+  }
+
+  async revokeCredential(
+    id: string,
+    { credentialNumber, reason, note }: RevokeCredentialDto,
+    revokedAt: Date,
+  ) {
+    const result = await this.workers
+      .updateOne(
+        {
+          _id: id,
+          deletedAt: null,
+          credentials: {
+            $elemMatch: { number: credentialNumber, revokedAt: null },
+          },
+        },
+        {
+          $set: {
+            'credentials.$.revokedAt': revokedAt,
+            'credentials.$.revokeReason': reason,
+            ...(note === undefined ? {} : { 'credentials.$.revokeNote': note }),
+          },
+        },
+        { runValidators: true },
+      )
+      .exec();
+    return result.modifiedCount === 1;
+  }
+
+  private throwCredentialWriteError(error: unknown): never {
+    if (
+      error instanceof mongo.MongoServerError &&
+      error.code === 11000 &&
+      Object.hasOwn(error.keyPattern ?? {}, 'credentials.number')
+    ) {
+      throw new DomainError(
+        'CREDENTIAL_IN_USE',
+        'This credential is already in use',
+      );
+    }
+    throw error;
+  }
+
   async create(input: CreateWorkerDto) {
     try {
       return await this.workers.create({
@@ -29,17 +103,7 @@ export class WorkersRepository {
         credentials: [{ number: input.credentialNumber }],
       });
     } catch (error) {
-      if (
-        error instanceof mongo.MongoServerError &&
-        error.code === 11000 &&
-        Object.hasOwn(error.keyPattern ?? {}, 'credentials.number')
-      ) {
-        throw new DomainError(
-          'CREDENTIAL_IN_USE',
-          'This credential is already in use',
-        );
-      }
-      throw error;
+      return this.throwCredentialWriteError(error);
     }
   }
 
