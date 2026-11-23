@@ -126,13 +126,44 @@ export class WorkersService {
       event.ticketExpiry = after.safetyTicketExpiry;
     if (Object.keys(event).length === 1) return after;
 
+    await this.publishWorkerUpdate(event, correlationId);
+    return after;
+  }
+
+  async changeSiteAssignment(
+    id: string,
+    siteId: string,
+    action: 'assign' | 'unassign',
+    correlationId: string,
+  ) {
+    const updated =
+      action === 'assign'
+        ? await this.workers.assignSite(id, siteId)
+        : await this.workers.unassignSite(id, siteId);
+
+    if (!updated) {
+      const { assignedSiteIds } = await this.get(id);
+      return { assignedSiteIds };
+    }
+
+    await this.publishWorkerUpdate(
+      { workerId: updated._id.toString(), siteIds: updated.assignedSiteIds },
+      correlationId,
+    );
+    return { assignedSiteIds: updated.assignedSiteIds };
+  }
+
+  private async publishWorkerUpdate(
+    event: WorkerUpdatedPayload,
+    correlationId: string,
+  ) {
     try {
       await this.events.publish(Topics.WORKER_UPDATED, event, correlationId);
     } catch (error) {
       workerLogger.error(
         {
           err: error,
-          workerId: after.id,
+          workerId: event.workerId,
           correlationId,
           topic: Topics.WORKER_UPDATED,
         },
@@ -143,7 +174,5 @@ export class WorkersService {
         'Worker changes were saved, but the update event could not be confirmed',
       );
     }
-
-    return after;
   }
 }

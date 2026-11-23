@@ -99,7 +99,7 @@ export class WorkersRepository {
         contractorId: new Types.ObjectId(input.contractorId),
         inductionDate: new Date(input.inductionDate),
         safetyTicketExpiry: new Date(input.safetyTicketExpiry),
-        assignedSiteIds: input.assignedSiteIds,
+        assignedSiteIds: [...new Set(input.assignedSiteIds)],
         credentials: [{ number: input.credentialNumber }],
       });
     } catch (error) {
@@ -122,6 +122,26 @@ export class WorkersRepository {
         { _id: id, deletedAt: null, $or: changedFields },
         { $set: changes },
         { returnDocument: 'before', runValidators: true },
+      )
+      .exec();
+  }
+
+  assignSite(id: string, siteId: string) {
+    return this.workers
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null, assignedSiteIds: { $ne: siteId } },
+        { $addToSet: { assignedSiteIds: siteId } },
+        { returnDocument: 'after' },
+      )
+      .exec();
+  }
+
+  unassignSite(id: string, siteId: string) {
+    return this.workers
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null, assignedSiteIds: siteId },
+        { $pull: { assignedSiteIds: siteId } },
+        { returnDocument: 'after' },
       )
       .exec();
   }
