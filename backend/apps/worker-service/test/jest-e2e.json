@@ -2,6 +2,12 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
+  "globalSetup": "<rootDir>/mongo.setup.ts",
+  "globalTeardown": "<rootDir>/mongo.teardown.ts",
+  "setupFiles": ["<rootDir>/env.setup.ts"],
+  "moduleNameMapper": {
+    "^@app/contracts$": "<rootDir>/../../../libs/contracts/src/index.ts"
+  },
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"

@@ -35,6 +35,7 @@
     "kafkajs": "^2.2.4",
     "mongoose": "^9.12.2",
     "node": "^27.0.0-alpha.0.1.1",
+    "pino": "^10.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -50,6 +51,7 @@
     "@types/supertest": "^7.0.0",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "jest": "^30.0.0",
+    "mongodb-memory-server-core": "^11.4.0",
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
