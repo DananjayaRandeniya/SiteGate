@@ -29,6 +29,10 @@ in `apps/worker-service/.env` before starting Worker Service. Call
 `POST /workers` with `Authorization: Bearer <token>`. The portal's server
 should forward this token only after verifying the Site Admin role.
 
+To try the requests in a browser, open [Worker Service Swagger](http://localhost:3001/docs).
+Select **Authorize**, enter the token, and use an existing contractor ID in
+the registration example.
+
 A successful request returns `201` and the new worker's `id`. A credential
 that is already assigned returns `409 CREDENTIAL_IN_USE`.
 

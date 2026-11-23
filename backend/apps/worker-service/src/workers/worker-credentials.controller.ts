@@ -8,6 +8,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { responseCorrelationId } from '../common/request-logging.middleware';
 import {
@@ -19,6 +20,7 @@ import { WorkerAdminGuard } from './worker-admin.guard';
 import { WorkerCredentialsService } from './worker-credentials.service';
 
 @Controller('workers/:id/credentials')
+@ApiBearerAuth()
 @UseGuards(WorkerAdminGuard)
 export class WorkerCredentialsController {
   constructor(private readonly credentials: WorkerCredentialsService) {}
