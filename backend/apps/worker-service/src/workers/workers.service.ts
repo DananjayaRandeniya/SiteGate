@@ -1,10 +1,17 @@
-import { Topics, type WorkerUpdatedPayload } from '@app/contracts';
+import {
+  DeactivationReason,
+  Topics,
+  type WorkerDeactivatedPayload,
+  WorkerStatus,
+  type WorkerUpdatedPayload,
+} from '@app/contracts';
 import { Injectable } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { DomainError } from '../common/domain-error';
 import { workerLogger } from '../common/logger';
 import { ContractorsService } from '../contractors/contractors.service';
 import type { CreateWorkerDto } from './dto/create-worker.dto';
+import type { DeactivateWorkerDto } from './dto/deactivate-worker.dto';
 import type { UpdateWorkerDto } from './dto/update-worker.dto';
 import { WorkerEventsProducer } from './events/worker-events.producer';
 import type { Worker } from './schemas/worker.schema';
@@ -91,6 +98,67 @@ export class WorkersService {
     if (!worker)
       throw new DomainError('WORKER_NOT_FOUND', 'Worker was not found');
     return workerProfile(worker);
+  }
+
+  async deactivate(
+    id: string,
+    { reason = DeactivationReason.OTHER, note }: DeactivateWorkerDto = {},
+    correlationId: string,
+  ) {
+    const workerId = id.toLowerCase();
+    if (await this.workers.deactivate(workerId, reason, note)) {
+      const event: WorkerDeactivatedPayload = { workerId, reason };
+      if (note !== undefined) event.note = note;
+      await this.publishDeactivation(event, correlationId);
+    } else if (!(await this.workers.existsVisible(workerId))) {
+      throw new DomainError('WORKER_NOT_FOUND', 'Worker was not found');
+    }
+    return { id: workerId, status: WorkerStatus.INACTIVE };
+  }
+
+  async archive(id: string, correlationId: string) {
+    const previous = await this.workers.archive(id);
+    if (!previous)
+      throw new DomainError('WORKER_NOT_FOUND', 'Worker was not found');
+
+    if (previous.status === WorkerStatus.ACTIVE) {
+      await this.publishDeactivation(
+        {
+          workerId: previous._id.toString(),
+          reason: DeactivationReason.OTHER,
+          note: 'Worker archived',
+        },
+        correlationId,
+      );
+    }
+  }
+
+  private async publishDeactivation(
+    event: WorkerDeactivatedPayload,
+    correlationId: string,
+  ) {
+    try {
+      await this.events.publish(
+        Topics.WORKER_DEACTIVATED,
+        event,
+        correlationId,
+      );
+    } catch (error) {
+      workerLogger.error(
+        {
+          err: error,
+          workerId: event.workerId,
+          correlationId,
+          topic: Topics.WORKER_DEACTIVATED,
+          reason: event.reason,
+        },
+        'Worker state saved but deactivation event could not be confirmed',
+      );
+      throw new DomainError(
+        'WORKER_DEACTIVATION_EVENT_UNCONFIRMED',
+        'Worker was made inactive, but the deactivation event could not be confirmed',
+      );
+    }
   }
 
   async update(id: string, input: UpdateWorkerDto, correlationId: string) {
