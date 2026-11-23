@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## SiteGate Git workflow
+
+Before every approved step, follow the [SiteGate Git workflow](../CODEX.md#before-every-step).
+Verify and reuse the existing checkout, fetch the latest branches, and review
+relevant PRs and diffs. Map the step to work already on `main` and in teammate
+branches. Check for duplicate work, conflicting changes, and unmerged
+dependencies before editing. Verify the change and follow the
+[pull request rules](../CODEX.md#pull-requests) when the story is ready.
+
 ## NestJS
 
 This app's version of NestJS is likely newer than what you know. https://docs.nestjs.com/llms.txt indexes its documentation, with a markdown page per chapter.
