@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { RevokeReason, WorkerStatus } from '@app/contracts';
+import { DeactivationReason, RevokeReason, WorkerStatus } from '@app/contracts';
 import { Schema as MongooseSchema, Types } from 'mongoose';
 import { Contractor } from '../../contractors/schemas/contractor.schema';
 
@@ -51,6 +51,12 @@ export class Worker {
     required: true,
   })
   status!: WorkerStatus;
+
+  @Prop({ type: String, enum: Object.values(DeactivationReason) })
+  deactivationReason?: DeactivationReason;
+
+  @Prop({ type: String })
+  deactivationNote?: string;
 
   @Prop({ type: Date, default: null })
   deletedAt!: Date | null;

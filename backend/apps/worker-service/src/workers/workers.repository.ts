@@ -1,3 +1,4 @@
+import { type DeactivationReason, WorkerStatus } from '@app/contracts';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, mongo, Types } from 'mongoose';
@@ -21,6 +22,34 @@ export class WorkersRepository {
 
   existsVisible(id: string) {
     return this.workers.exists({ _id: id, deletedAt: null }).exec();
+  }
+
+  async deactivate(id: string, reason: DeactivationReason, note?: string) {
+    const result = await this.workers
+      .updateOne(
+        { _id: id, deletedAt: null, status: WorkerStatus.ACTIVE },
+        {
+          $set: {
+            status: WorkerStatus.INACTIVE,
+            deactivationReason: reason,
+            ...(note === undefined ? {} : { deactivationNote: note }),
+          },
+        },
+        { runValidators: true },
+      )
+      .exec();
+    return result.modifiedCount === 1;
+  }
+
+  archive(id: string) {
+    // The previous status tells us whether this archive also made the worker inactive.
+    return this.workers
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null },
+        { $set: { deletedAt: new Date(), status: WorkerStatus.INACTIVE } },
+        { returnDocument: 'before', runValidators: true },
+      )
+      .exec();
   }
 
   async issueCredential(id: string, credentialNumber: string, issuedAt: Date) {
