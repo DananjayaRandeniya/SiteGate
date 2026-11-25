@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer } from 'kafkajs';
 import { dlqTopic } from '@app/contracts';
 import type { Topic } from '@app/contracts';
+import { ProcessedEventsRepository } from '../processed-events/processed-events.repository';
 
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 500;
@@ -12,10 +13,13 @@ export class DeadLetterService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DeadLetterService.name);
   private readonly producer: Producer;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly processedEvents: ProcessedEventsRepository,
+    ) {
     const brokers = config.getOrThrow<string>('KAFKA_BROKERS').split(',');
     this.producer = new Kafka({ clientId: 'access-service-dlq', brokers }).producer();
-  }
+    }
 
   async onModuleInit() {
     await this.producer.connect();
@@ -31,24 +35,33 @@ export class DeadLetterService implements OnModuleInit, OnModuleDestroy {
         await this.sendToDlq(topic, event, 'Invalid event: missing eventId, eventType or payload');
         return;
     }
+
+    const { eventId, eventType } = event as { eventId: string; eventType: string };
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
+        // Already processed? Skip quietly. This is a normal case, not an error.
+        if (await this.processedEvents.exists(eventId)) {
+            this.logger.log(`Skipping duplicate event ${eventId} on ${topic}`);
+            return;
+        }
+
         await work();
-        return; // it worked, so we're done
+        await this.processedEvents.markProcessed(eventId, eventType);
+        return;
         } catch (err) {
         lastError = err;
         this.logger.warn(`${topic}: attempt ${attempt} of ${MAX_ATTEMPTS} failed`);
 
         if (attempt < MAX_ATTEMPTS) {
-            // wait 500 ms after the first failure, 1000 ms after the second
-            await new Promise((resolve) => setTimeout(resolve, BASE_DELAY_MS * 2 ** (attempt - 1)));
+            await new Promise((resolve) =>
+            setTimeout(resolve, BASE_DELAY_MS * 2 ** (attempt - 1)),
+            );
         }
         }
     }
 
-    // All attempts failed: dead-letter it
     const reason = lastError instanceof Error ? lastError.message : String(lastError);
     await this.sendToDlq(topic, event, reason);
     }

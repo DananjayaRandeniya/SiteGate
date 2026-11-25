@@ -9,6 +9,7 @@ import { HealthController } from './health/health.controller';
 import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.module';
 import { WorkerEventsController } from './events/worker-events.controller';
 import { DeadLetterService } from './events/dead-letter.service';
+import { ProcessedEventsModule } from './processed-events/processed-events.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { DeadLetterService } from './events/dead-letter.service';
         uri: config.getOrThrow<string>('MONGO_URI'),
       }),
     }),
-    WorkerSnapshotsModule
+    WorkerSnapshotsModule,
+    ProcessedEventsModule
   ],
   controllers: [AccessServiceController, HealthController, WorkerEventsController],
   providers: [AccessServiceService, DeadLetterService],
