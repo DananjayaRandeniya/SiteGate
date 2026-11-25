@@ -12,55 +12,68 @@ import type {
   WorkerDeactivatedEvent,
   WorkerUpdatedEvent,
 } from '@app/contracts';
+import { AlertsService } from '../alerts/alerts.service';
 import { AuditService } from '../audit/audit.service';
 
 @Controller()
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
 
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly alertsService: AlertsService,
+  ) {}
 
   @EventPattern(Topics.WORKER_CREATED)
-  onWorkerCreated(@Payload() event: WorkerCreatedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onWorkerCreated(@Payload() event: WorkerCreatedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
   @EventPattern(Topics.WORKER_UPDATED)
-  onWorkerUpdated(@Payload() event: WorkerUpdatedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onWorkerUpdated(@Payload() event: WorkerUpdatedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
   @EventPattern(Topics.WORKER_DEACTIVATED)
-  onWorkerDeactivated(@Payload() event: WorkerDeactivatedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onWorkerDeactivated(@Payload() event: WorkerDeactivatedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
   @EventPattern(Topics.CREDENTIAL_ISSUED)
-  onCredentialIssued(@Payload() event: CredentialIssuedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onCredentialIssued(@Payload() event: CredentialIssuedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
   @EventPattern(Topics.CREDENTIAL_REVOKED)
-  onCredentialRevoked(@Payload() event: CredentialRevokedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onCredentialRevoked(@Payload() event: CredentialRevokedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
   @EventPattern(Topics.ACCESS_GRANTED)
-  onAccessGranted(@Payload() event: AccessGrantedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onAccessGranted(@Payload() event: AccessGrantedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
+  // The only handler that does more than store the event
   @EventPattern(Topics.ACCESS_DENIED)
-  onAccessDenied(@Payload() event: AccessDeniedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onAccessDenied(@Payload() event: AccessDeniedEvent, @Ctx() ctx: unknown) {
+    const saved = await this.handle(event, ctx);
+    if (saved) {
+      // Only new events are checked, so a duplicate delivery cannot raise an alert twice
+      await this.alertsService.evaluate(event);
+    }
   }
 
   @EventPattern(Topics.ALERT_RAISED)
-  onAlertRaised(@Payload() event: AlertRaisedEvent, @Ctx() ctx: unknown) {
-    return this.handle(event, ctx);
+  async onAlertRaised(@Payload() event: AlertRaisedEvent, @Ctx() ctx: unknown) {
+    await this.handle(event, ctx);
   }
 
-  private async handle(event: EventEnvelope<string, unknown>, ctx: unknown) {
+  /** Logs the event and stores it. Returns true if it was new, false if a duplicate. */
+  private async handle(
+    event: EventEnvelope<string, unknown>,
+    ctx: unknown,
+  ): Promise<boolean> {
     const kafkaCtx = ctx as KafkaContext; // Nest passes a KafkaContext here
     const meta = {
       topic: kafkaCtx.getTopic(),
@@ -73,6 +86,6 @@ export class EventsController {
         `eventId=${event.eventId} correlationId=${event.correlationId}`,
     );
 
-    await this.auditService.record(event, meta);
+    return this.auditService.record(event, meta);
   }
 }

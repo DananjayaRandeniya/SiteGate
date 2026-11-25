@@ -26,3 +26,5 @@ export const AuditEventSchema = SchemaFactory.createForClass(AuditEvent);
 // The duplicate check: MongoDB refuses a second record with the same eventId.
 // Used by GET /workers/:id/audit: filter by worker, newest first
 AuditEventSchema.index({ workerId: 1, occurredAt: -1, _id: -1 });
+// Used by the REPEATED_DENIAL rule: denials for one credential in a time window
+AuditEventSchema.index({ credentialNumber: 1, eventType: 1, occurredAt: -1 });

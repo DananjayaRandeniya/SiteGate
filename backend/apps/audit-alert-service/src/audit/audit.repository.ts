@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { AuditEvent } from './schemas/audit-event.schema';
+import { Topics } from '@app/contracts';
 
 // MongoDB error code 11000 means "this would break a unique index"
 const isDuplicateKeyError = (err: unknown): boolean =>
@@ -46,5 +47,14 @@ export class AuditRepository {
       this.model.countDocuments(filter).exec(),
     ]);
     return { items, total };
+  }
+    countDenials(credentialNumber: string, from: Date, to: Date): Promise<number> {
+    return this.model
+      .countDocuments({
+        eventType: Topics.ACCESS_DENIED,
+        credentialNumber,
+        occurredAt: { $gte: from, $lte: to },
+      })
+      .exec();
   }
 }
