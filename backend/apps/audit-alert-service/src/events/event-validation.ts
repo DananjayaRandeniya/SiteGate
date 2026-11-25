@@ -84,7 +84,7 @@ const payloadSchemas: Record<Topic, Joi.ObjectSchema> = {
     alertId: id,
     type: Joi.string().valid(...Object.values(AlertType)).required(),
     severity: Joi.string().valid(...Object.values(AlertSeverity)).required(),
-    workerId: id, // contract says required; change here if the team makes it optional
+    workerId: Joi.string().min(1), // optional: missing when the credential is unknown
     siteId: id,
   }).unknown(true),
 };
