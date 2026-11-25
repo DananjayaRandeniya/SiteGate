@@ -34,3 +34,9 @@ AlertSchema.index(
   { type: 1, credentialNumber: 1 },
   { unique: true, partialFilterExpression: { status: AlertStatus.OPEN } },
 );
+// GET /alerts without filters, or filtered by type, severity, site or credential: newest first
+AlertSchema.index({ createdAt: -1, _id: -1 });
+// GET /alerts?status=...: the most common filter
+AlertSchema.index({ status: 1, createdAt: -1, _id: -1 });
+// GET /alerts?workerId=...: alerts of one worker
+AlertSchema.index({ workerId: 1, createdAt: -1, _id: -1 });
