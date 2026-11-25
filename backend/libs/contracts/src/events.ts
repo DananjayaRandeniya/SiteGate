@@ -68,7 +68,7 @@ export interface AlertRaisedPayload {
   alertId: string;
   type: AlertType;
   severity: AlertSeverity;
-  workerId: string;
+  workerId?: string;
   siteId: string;
 }
 
