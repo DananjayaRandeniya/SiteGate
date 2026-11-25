@@ -18,7 +18,7 @@ export class AuditService {
   async record(
     event: EventEnvelope<string, unknown>,
     meta: KafkaMeta,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const payload = (event.payload ?? {}) as Record<string, unknown>;
 
     const saved = await this.repository.insertIfNew({
@@ -41,6 +41,7 @@ export class AuditService {
       // Not an error: the same event arrived twice
       this.logger.debug(`Duplicate event ignored: ${event.eventId}`);
     }
+    return saved;
   }
     async getWorkerAudit(workerId: string, query: AuditQueryDto) {
     const { page, pageSize } = query;
@@ -50,5 +51,8 @@ export class AuditService {
       pageSize,
     );
     return { data: items, page, pageSize, total };
+  }
+    countDenials(credentialNumber: string, from: Date, to: Date): Promise<number> {
+    return this.repository.countDenials(credentialNumber, from, to);
   }
 }
