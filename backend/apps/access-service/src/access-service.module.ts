@@ -8,6 +8,7 @@ import { AccessServiceService } from './access-service.service';
 import { HealthController } from './health/health.controller';
 import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.module';
 import { WorkerEventsController } from './events/worker-events.controller';
+import { DeadLetterService } from './events/dead-letter.service';
 
 @Module({
   imports: [
@@ -30,6 +31,6 @@ import { WorkerEventsController } from './events/worker-events.controller';
     WorkerSnapshotsModule
   ],
   controllers: [AccessServiceController, HealthController, WorkerEventsController],
-  providers: [AccessServiceService],
+  providers: [AccessServiceService, DeadLetterService],
 })
 export class AccessServiceModule {}
