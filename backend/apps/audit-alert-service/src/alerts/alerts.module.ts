@@ -7,10 +7,14 @@ import { ALERT_RULES } from './rules/alert-rule';
 import { ExpiredTicketRule } from './rules/expired-ticket.rule';
 import { RepeatedDenialRule } from './rules/repeated-denial.rule';
 import { Alert, AlertSchema } from './schemas/alert.schema';
+import { KafkaModule } from '../kafka/kafka.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     AuditModule,
+    KafkaModule,
+    NotificationsModule,
     MongooseModule.forFeature([{ name: Alert.name, schema: AlertSchema }]),
   ],
   providers: [
