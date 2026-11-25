@@ -9,8 +9,11 @@ import { RepeatedDenialRule } from './rules/repeated-denial.rule';
 import { Alert, AlertSchema } from './schemas/alert.schema';
 import { KafkaModule } from '../kafka/kafka.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AlertsController } from './alerts.controller';
+import { AlertsManagementService } from './alerts-management.service';
 
 @Module({
+  controllers: [AlertsController],
   imports: [
     AuditModule,
     KafkaModule,
@@ -20,6 +23,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [
     AlertsRepository,
     AlertsService,
+    AlertsManagementService,
     RepeatedDenialRule,
     ExpiredTicketRule,
     // To add a rule later: write the class, add it to this list. Nothing else changes.
