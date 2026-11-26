@@ -1,0 +1,55 @@
+name: Worker Service image
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/worker-service-image.yml
+      - backend/.dockerignore
+      - backend/docker-compose.yml
+      - backend/apps/worker-service/**
+      - backend/libs/contracts/**
+      - backend/nest-cli.json
+      - backend/package*.json
+      - backend/tsconfig.json
+      - backend/tsconfig.*.json
+      - backend/jest.config.ts
+      - backend/.oxlintrc.json
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Lint Worker Service and contracts
+        run: ./node_modules/.bin/oxlint --type-aware apps/worker-service/ libs/contracts/
+      - name: Run Worker Service unit tests
+        run: npm test -- --runInBand --testPathPatterns worker-service
+      - name: Run Worker Service end-to-end tests
+        run: npm test -- --config apps/worker-service/test/jest-e2e.json --runInBand
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Compose configuration
+        run: docker compose -f backend/docker-compose.yml --profile worker config --quiet
+      - name: Build Worker Service
+        run: docker build -f backend/apps/worker-service/Dockerfile -t sitegate-worker-service:ci backend
+      - name: Check image size and runtime user
+        run: |
+          size=$(docker image inspect sitegate-worker-service:ci --format '{{.Size}}')
+          echo "Worker Service image size: $size bytes"
+          test "$size" -lt 250000000
+          test "$(docker run --rm --entrypoint id sitegate-worker-service:ci -u)" -ne 0
