@@ -14,11 +14,17 @@ export function PortalNavigation() {
   const inAudit = /^\/workers\/[^/]+\/audit\/?$/.test(pathname);
 
   return (
-    <nav aria-label="Main navigation" className="flex flex-wrap gap-2 md:flex-col md:gap-4">
+    <nav
+      aria-label="Main navigation"
+      className="flex flex-wrap gap-2 md:flex-col md:gap-4"
+    >
       {navigation.map(({ href, label, includes }) => {
         const selected =
-          label === "Audit" && inAudit ||
-          !inAudit && includes.some((path) => pathname === path || pathname.startsWith(path + "/"));
+          (label === "Audit" && inAudit) ||
+          (!inAudit &&
+            includes.some(
+              (path) => pathname === path || pathname.startsWith(path + "/"),
+            ));
 
         return (
           <Link
@@ -38,13 +44,21 @@ export function PortalNavigation() {
 export function PortalSection() {
   const pathname = usePathname();
   const label =
-    pathname === "/workers/new" ? "Workers / Add worker" :
-    /^\/workers\/[^/]+\/audit\/?$/.test(pathname) ? "Audit / Worker history" :
-    pathname.startsWith("/workers/") ? "Workers / Profile" :
-    pathname === "/workers" ? "Workers" :
-    pathname.startsWith("/sites/") ? "Access / On site" :
-    pathname === "/gates" ? "Access" :
-    pathname === "/alerts" ? "Audit" : "Dashboard";
+    pathname === "/workers/new"
+      ? "Workers / Add worker"
+      : /^\/workers\/[^/]+\/audit\/?$/.test(pathname)
+        ? "Audit / Worker history"
+        : pathname.startsWith("/workers/")
+          ? "Workers / Profile"
+          : pathname === "/workers"
+            ? "Workers"
+            : pathname.startsWith("/sites/")
+              ? "Access / On site"
+              : pathname === "/gates"
+                ? "Access"
+                : pathname === "/alerts"
+                  ? "Audit"
+                  : "Dashboard";
 
   return <span>{label}</span>;
 }
