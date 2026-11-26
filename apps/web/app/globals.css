@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "../lib/tokens.css";
+
+@layer base {
+  body {
+    min-width: 0;
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+}
