@@ -61,5 +61,23 @@ services:
       mongo:
         condition: service_healthy
 
+  audit-alert-service:
+    build:
+      context: .
+      dockerfile: apps/audit-alert-service/Dockerfile
+    container_name: audit-alert-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      MONGO_URI: mongodb://mongo:27017/audit_db
+      KAFKA_BROKERS: kafka:29092
+      WEBHOOK_URL: http://host.docker.internal:4000/hook
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
 volumes:
   mongo_data:
