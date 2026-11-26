@@ -1,5 +1,6 @@
 // Simulates a gate tapping a card.
 // Usage: npx tsx scripts/simulate-gate.ts <credentialNumber> [siteId] [gateId] [ENTRY|EXIT] [count]
+/// <reference types="node" />
 const [
   credentialNumber,
   siteId = 'S-01',
