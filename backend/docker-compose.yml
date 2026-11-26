@@ -79,5 +79,25 @@ services:
       mongo:
         condition: service_healthy
 
+  worker-service:
+    profiles: ["worker"]
+    build:
+      context: .
+      dockerfile: apps/worker-service/Dockerfile
+    ports:
+      - "127.0.0.1:${WORKER_HOST_PORT:-3001}:3001"
+    env_file:
+      - path: ./apps/worker-service/.env
+        required: false
+    environment:
+      MONGO_URI: mongodb://mongo:27017/workers_db
+      KAFKA_BROKERS: kafka:29092
+      PORT: "3001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
 volumes:
   mongo_data:
