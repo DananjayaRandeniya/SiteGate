@@ -1,5 +1,5 @@
 # ---- Build stage: has dev dependencies, compiles the service ----
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,11 +7,17 @@ COPY . .
 RUN npx nest build audit-alert-service
 
 # ---- Runtime stage: production dependencies only ----
-FROM node:20-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force \
+ && rm -rf node_modules/typescript \
+ && find node_modules -type f \( -name "*.map" -o -name "*.md" \) -delete \
+ && rm -rf /usr/local/include \
+           /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
 COPY --from=build /app/dist/apps/audit-alert-service ./dist
 
 USER node
