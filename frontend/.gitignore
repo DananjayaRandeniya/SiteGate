@@ -1,6 +1,7 @@
 .next/
 out/
 node_modules/
+test-results/
 next-env.d.ts
 *.tsbuildinfo
 .env*

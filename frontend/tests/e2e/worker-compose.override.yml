@@ -1,0 +1,15 @@
+services:
+  kafka:
+    container_name: !reset null
+    ports: !reset []
+  mongo:
+    container_name: !reset null
+    ports: !reset []
+  kafka-init:
+    container_name: !reset null
+  worker-service:
+    env_file: !reset []
+    environment:
+      WORKER_ADMIN_TOKEN: ${SITEGATE_E2E_WORKER_TOKEN:?Worker test token is required}
+    ports: !override
+      - "127.0.0.1::3001"
