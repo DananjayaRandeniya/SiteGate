@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/portal.yml
-      - apps/web/**
+      - frontend/**
       - backend/.dockerignore
       - backend/docker-compose.yml
       - backend/apps/**
@@ -24,14 +24,14 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: apps/web
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '26'
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
@@ -45,9 +45,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Validate Compose configuration
-        run: docker compose -f backend/docker-compose.yml --profile portal config --quiet
+        run: docker compose -f backend/docker-compose.yml config --quiet
       - name: Start the portal and its backends
-        run: docker compose -f backend/docker-compose.yml up -d --build --wait --wait-timeout 150 web
+        run: docker compose -f backend/docker-compose.yml up -d --build --wait --wait-timeout 150
       - name: Check the running portal and service connections
         run: |
           curl --fail --silent --show-error --max-time 10 http://localhost:3000/api/health
@@ -64,7 +64,7 @@ jobs:
           NODE
       - name: Show service logs on failure
         if: failure()
-        run: docker compose -f backend/docker-compose.yml --profile portal logs --no-color --tail 100
+        run: docker compose -f backend/docker-compose.yml logs --no-color --tail 100
       - name: Stop the test stack
         if: always()
-        run: docker compose -f backend/docker-compose.yml --profile portal down --volumes
+        run: docker compose -f backend/docker-compose.yml down --volumes

@@ -96,7 +96,6 @@ services:
         condition: service_completed_successfully
 
   worker-service:
-    profiles: ["worker", "portal"]
     build:
       context: .
       dockerfile: apps/worker-service/Dockerfile
@@ -112,11 +111,10 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   access-service:
-    profiles: ["portal"]
     build:
       context: .
       dockerfile: apps/access-service/Dockerfile
@@ -133,13 +131,12 @@ services:
         condition: service_completed_successfully
 
   web:
-    profiles: ["portal"]
     build:
-      context: ../apps/web
+      context: ../frontend
     ports:
       - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
     env_file:
-      - path: ../apps/web/.env
+      - path: ../frontend/.env
         required: false
     environment:
       WORKER_SERVICE_URL: http://worker-service:3001
