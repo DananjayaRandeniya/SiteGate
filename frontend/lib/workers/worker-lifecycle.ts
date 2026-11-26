@@ -39,6 +39,13 @@ export const deactivatedWorkerSchema = z.object({
   id: workerIdSchema,
   status: z.literal("Inactive"),
 });
+export const workerSiteChangeSchema = z.strictObject({
+  siteId: z.string().trim().min(1, "Choose a site."),
+});
+export const workerSitesSchema = workerRegistrationSchema
+  .required()
+  .pick({ assignedSiteIds: true });
+export const archiveWorkerSchema = z.strictObject({});
 export const issuedCredentialSchema = z.object({
   ...issueCredentialSchema.shape,
   issuedAt: z.iso.datetime(),

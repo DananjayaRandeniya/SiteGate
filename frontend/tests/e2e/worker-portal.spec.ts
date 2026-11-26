@@ -202,6 +202,20 @@ test("Admin registers and manages a worker while Manager can only view", async (
       ).toBeVisible();
     });
 
+    await test.step("Assign and remove sites from the worker profile", async () => {
+      const dialog = directory.getByRole("dialog");
+      await directory.getByRole("button", { name: "Assign site" }).click();
+      await dialog.getByLabel("Site ID").fill("S-02");
+      await dialog.getByRole("button", { name: "Assign site" }).click();
+      await expect(
+        directory.getByText("S-01, S-02", { exact: true }),
+      ).toBeVisible();
+      await directory.getByRole("button", { name: "Remove site" }).click();
+      await dialog.getByLabel("Site", { exact: true }).selectOption("S-01");
+      await dialog.getByRole("button", { name: "Remove site" }).click();
+      await expect(directory.getByText("S-02", { exact: true })).toBeVisible();
+    });
+
     await test.step("Confirm the Manager sees the profile but cannot change it", async () => {
       const page = await readonly.newPage();
       const profile = new URL(phone.url()).pathname;
@@ -217,10 +231,47 @@ test("Admin registers and manages a worker while Manager can only view", async (
         data: { fullName: "Unauthorized edit" },
       });
       expect(denied.status()).toBe(403);
+      for (const [path, data] of [
+        [profile + "/sites", { siteId: "S-02" }],
+        [profile, {}],
+      ] as const) {
+        const deniedDelete = await readonly.request.delete(
+          `${portal}/api${path}`,
+          {
+            headers: { Origin: portal },
+            data,
+          },
+        );
+        expect(deniedDelete.status()).toBe(403);
+      }
       await page.goto(`${portal}/workers/new`);
       await expect(
         page.getByRole("heading", { name: "Admin access is required" }),
       ).toBeVisible();
+    });
+
+    await test.step("Confirm archive hides the worker from the directory and API", async () => {
+      const profile = new URL(directory.url()).pathname;
+      await directory.getByRole("button", { name: "Archive worker" }).click();
+      const dialog = directory.getByRole("dialog");
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await expect(
+        directory.getByRole("heading", { name: "Morgan Vale Updated" }),
+      ).toBeVisible();
+      await directory.getByRole("button", { name: "Archive worker" }).click();
+      await Promise.all([
+        directory.waitForURL("**/workers?archived=1"),
+        dialog.getByRole("button", { name: "Archive worker" }).click(),
+      ]);
+      await expect(
+        directory.getByText("Worker archived.", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        directory.getByRole("link", { name: "Morgan Vale Updated" }),
+      ).toHaveCount(0);
+      expect(
+        (await desktop.request.get(`${portal}/api${profile}`)).status(),
+      ).toBe(404);
     });
   } finally {
     await Promise.all(contexts.map((context) => context.close()));

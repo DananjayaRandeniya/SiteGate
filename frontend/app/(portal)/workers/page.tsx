@@ -43,7 +43,8 @@ export default async function WorkersPage({
       </>
     );
 
-  const query = workerDirectoryQuery(await searchParams);
+  const params = await searchParams;
+  const query = workerDirectoryQuery(params);
   let directory: Awaited<ReturnType<typeof getWorkerDirectory>>;
   let contractors: Awaited<ReturnType<typeof getContractors>>;
   try {
@@ -74,6 +75,14 @@ export default async function WorkersPage({
   return (
     <>
       {heading}
+      {role === "Admin" && params.archived === "1" && (
+        <p
+          role="status"
+          className="rounded-control bg-success-bg p-3 text-sm font-semibold text-success"
+        >
+          Worker archived.
+        </p>
+      )}
       <WorkerDirectoryFilters
         key={query.toString()}
         search={query.get("search") ?? ""}

@@ -8,6 +8,8 @@ import {
   revokeCredentialSchema,
   revokedCredentialSchema,
   updateWorkerSchema,
+  workerSiteChangeSchema,
+  workerSitesSchema,
 } from "./worker-lifecycle";
 import { workerRegistrationSchema } from "./worker-registration";
 import {
@@ -36,9 +38,9 @@ export class WorkerPortalApiError extends Error {
 }
 
 type Submission = {
-  method: "POST" | "PATCH";
+  method: "POST" | "PATCH" | "DELETE";
   body: unknown;
-  expected: 200 | 201;
+  expected: 200 | 201 | 204;
   unconfirmedMessage?: string;
 };
 
@@ -75,7 +77,10 @@ async function workerRequest<T>(
     throw new WorkerPortalApiError(503, unavailable);
   }
 
-  const body: unknown = await response.json().catch(() => undefined);
+  const body: unknown =
+    response.status === 204
+      ? undefined
+      : await response.json().catch(() => undefined);
   if (!response.ok) {
     throw new WorkerPortalApiError(
       response.status,
@@ -177,4 +182,26 @@ export function submitWorkerDeactivation(
       expected: 200,
     },
   );
+}
+
+export function submitWorkerSiteChange(
+  id: string,
+  method: "POST" | "DELETE",
+  siteId: string,
+) {
+  return workerRequest(`${workerApiPath(id)}/sites`, workerSitesSchema, {
+    method,
+    body: workerSiteChangeSchema.parse({ siteId }),
+    expected: 200,
+  });
+}
+
+export function submitWorkerArchive(id: string) {
+  return workerRequest(workerApiPath(id), z.undefined(), {
+    method: "DELETE",
+    body: {},
+    expected: 204,
+    unconfirmedMessage:
+      "Could not confirm the archive. Check the worker directory before trying again.",
+  });
 }

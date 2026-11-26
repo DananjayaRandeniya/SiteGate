@@ -13,10 +13,15 @@ import {
   submitCredentialIssue,
   submitCredentialRevocation,
   submitWorkerDeactivation,
+  submitWorkerArchive,
+  submitWorkerSiteChange,
   submitWorkerUpdate,
   WorkerPortalApiError,
 } from "@/lib/workers/worker-portal-client";
-import { todayAtSite } from "@/lib/workers/worker-registration";
+import {
+  demoWorkerSiteIds,
+  todayAtSite,
+} from "@/lib/workers/worker-registration";
 import type { workerProfileSchema } from "@/lib/workers/worker-schemas";
 import {
   WorkerField,
@@ -30,6 +35,9 @@ const actionLabels = {
   issue: "Issue credential",
   revoke: "Revoke credential",
   deactivate: "Deactivate worker",
+  assign: "Assign site",
+  unassign: "Remove site",
+  archive: "Archive worker",
 };
 type Action = keyof typeof actionLabels;
 
@@ -46,6 +54,9 @@ export function WorkerProfileActions({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const unassignedSites = demoWorkerSiteIds.filter(
+    (site) => !worker.assignedSiteIds.includes(site),
+  );
 
   useEffect(() => {
     if (action && dialog.current && !dialog.current.open) {
@@ -97,12 +108,24 @@ export function WorkerProfileActions({
           }),
         );
         setMessage("Credential revoked.");
-      } else {
+      } else if (action === "deactivate") {
         await submitWorkerDeactivation(
           worker.id,
           deactivateWorkerSchema.parse({ reason: value("reason"), note }),
         );
         setMessage("Worker deactivated.");
+      } else if (action === "assign" || action === "unassign") {
+        await submitWorkerSiteChange(
+          worker.id,
+          action === "assign" ? "POST" : "DELETE",
+          value("siteId"),
+        );
+        setMessage(action === "assign" ? "Site assigned." : "Site removed.");
+      } else {
+        await submitWorkerArchive(worker.id);
+        dialog.current?.close();
+        router.replace("/workers?archived=1");
+        return;
       }
       dialog.current?.close();
       router.refresh();
@@ -155,6 +178,29 @@ export function WorkerProfileActions({
             {actionLabels.deactivate}
           </button>
         )}
+        <button
+          type="button"
+          className={workerSecondaryClass}
+          onClick={() => open("assign")}
+        >
+          {actionLabels.assign}
+        </button>
+        {worker.assignedSiteIds.length > 0 && (
+          <button
+            type="button"
+            className={workerSecondaryClass}
+            onClick={() => open("unassign")}
+          >
+            {actionLabels.unassign}
+          </button>
+        )}
+        <button
+          type="button"
+          className={workerSecondaryClass}
+          onClick={() => open("archive")}
+        >
+          {actionLabels.archive}
+        </button>
       </div>
       {message && (
         <p
@@ -262,6 +308,47 @@ export function WorkerProfileActions({
                   className={workerInputClass}
                 />
               </WorkerField>
+            )}
+            {action === "assign" && (
+              <WorkerField id="worker-action-site" label="Site ID">
+                <input
+                  id="worker-action-site"
+                  name="siteId"
+                  list="worker-site-options"
+                  placeholder="e.g. S-02"
+                  required
+                  className={workerInputClass}
+                />
+                <datalist id="worker-site-options">
+                  {unassignedSites.map((site) => (
+                    <option key={site} value={site} />
+                  ))}
+                </datalist>
+              </WorkerField>
+            )}
+            {action === "unassign" && (
+              <WorkerField id="worker-action-site" label="Site">
+                <select
+                  id="worker-action-site"
+                  name="siteId"
+                  className={workerInputClass}
+                  required
+                  defaultValue=""
+                >
+                  <option value="">Choose a site</option>
+                  {worker.assignedSiteIds.map((site) => (
+                    <option key={site} value={site}>
+                      {site}
+                    </option>
+                  ))}
+                </select>
+              </WorkerField>
+            )}
+            {action === "archive" && (
+              <p className="text-sm text-muted">
+                Archiving {worker.fullName} removes them from the Worker
+                directory and ends their site access.
+              </p>
             )}
             {(action === "revoke" || action === "deactivate") && (
               <>

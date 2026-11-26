@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { workerIdSchema } from "./worker-schemas";
 
+export const demoWorkerSiteIds = ["S-01", "S-02"];
+
 const siteDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Colombo",
   year: "numeric",

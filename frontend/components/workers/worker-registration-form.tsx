@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useWorkerRegistration } from "@/lib/workers/use-worker-registration";
-import { todayAtSite } from "@/lib/workers/worker-registration";
+import {
+  demoWorkerSiteIds,
+  todayAtSite,
+} from "@/lib/workers/worker-registration";
 import {
   WorkerField,
   workerButtonClass,
@@ -23,7 +26,7 @@ export function WorkerRegistrationForm({
   const selected =
     useWatch({ control: form.control, name: "assignedSiteIds" }) ?? [];
   const [otherSite, setOtherSite] = useState("");
-  const sites = [...new Set(["S-01", "S-02", ...selected])];
+  const sites = [...new Set([...demoWorkerSiteIds, ...selected])];
   const errorProps = (id: string, message?: string) => ({
     "aria-invalid": message ? true : undefined,
     "aria-describedby": message ? `${id}-error` : undefined,

@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { workerDirectoryQuery } from "./directory-query";
 import {
+  archiveWorkerSchema,
   deactivateWorkerSchema,
   deactivatedWorkerSchema,
   issueCredentialSchema,
@@ -10,6 +11,8 @@ import {
   revokeCredentialSchema,
   revokedCredentialSchema,
   updateWorkerSchema,
+  workerSiteChangeSchema,
+  workerSitesSchema,
 } from "./worker-lifecycle";
 import { workerRegistrationSchema } from "./worker-registration";
 import {
@@ -98,7 +101,7 @@ async function requestWorkerService<T>(
 
   let body: unknown;
   try {
-    body = await response.json();
+    body = response.status === 204 ? undefined : await response.json();
   } catch {
     throw new WorkerServiceError(502, "WORKER_SERVICE_INVALID_RESPONSE");
   }
@@ -145,7 +148,7 @@ export function getContractors() {
 
 async function changeWorker<T>(
   path: string,
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "DELETE",
   input: unknown,
   response: z.ZodType<T>,
 ) {
@@ -208,5 +211,27 @@ export async function deactivateWorker(id: string, input: unknown) {
     "PATCH",
     deactivateWorkerSchema.parse(input),
     deactivatedWorkerSchema,
+  );
+}
+
+export async function changeWorkerSite(
+  id: string,
+  method: "POST" | "DELETE",
+  input: unknown,
+) {
+  return changeWorker(
+    `${workerPath(id)}/sites`,
+    method,
+    workerSiteChangeSchema.parse(input),
+    workerSitesSchema,
+  );
+}
+
+export async function archiveWorker(id: string, input: unknown) {
+  return changeWorker(
+    workerPath(id),
+    "DELETE",
+    archiveWorkerSchema.parse(input),
+    z.undefined(),
   );
 }
