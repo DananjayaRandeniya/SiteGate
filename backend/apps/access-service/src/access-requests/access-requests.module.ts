@@ -8,9 +8,10 @@ import { InductionValidRule } from './rules/induction-valid.rule';
 import { TicketValidRule } from './rules/ticket-valid.rule';
 import { UnknownCredentialRule } from './rules/unknown-credential.rule';
 import { WorkerInactiveRule } from './rules/worker-inactive.rule';
+import { AccessLogModule } from '../access-log/access-log.module';
 
 @Module({
-  imports: [WorkerSnapshotsModule],
+  imports: [WorkerSnapshotsModule, AccessLogModule],
   controllers: [AccessRequestsController],
   providers: [
     AccessDecisionService,

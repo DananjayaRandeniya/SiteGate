@@ -10,6 +10,7 @@ import { WorkerInactiveRule } from './rules/worker-inactive.rule';
 import { AssignedToSiteRule } from './rules/assigned-to-site.rule';
 import { InductionValidRule } from './rules/induction-valid.rule';
 import { TicketValidRule } from './rules/ticket-valid.rule';
+import { AccessLogRepository } from '../access-log/access-log.repository';
 
 export interface AccessDecision {
   result: AccessResult;
@@ -23,6 +24,7 @@ export class AccessDecisionService {
 
   constructor(
     private readonly snapshots: WorkerSnapshotsRepository,
+    private readonly accessLog: AccessLogRepository,
     unknownCredential: UnknownCredentialRule,
     credentialRevoked: CredentialRevokedRule,
     workerInactive: WorkerInactiveRule,
@@ -43,15 +45,33 @@ export class AccessDecisionService {
 
   async decide(dto: AccessRequestDto): Promise<AccessDecision> {
     const snapshot = await this.snapshots.findByCredentialNumber(dto.credentialNumber);
-    const ctx: AccessContext = { snapshot, siteId: dto.siteId, now: new Date() };
+    const decision = this.evaluate({ snapshot, siteId: dto.siteId, now: new Date() });
 
-    for (const rule of this.rules) {
-      const reasonCode = rule.check(ctx);
-      if (reasonCode) {
-        return { result: AccessResult.DENIED, reasonCode, workerId: snapshot?.workerId };
-      }
+    await this.accessLog.record({
+        credentialNumber: dto.credentialNumber,
+        workerId: decision.workerId,
+        siteId: dto.siteId,
+        gateId: dto.gateId,
+        direction: dto.direction,
+        result: decision.result,
+        reasonCode: decision.reasonCode,
+    });
+
+    return decision;
     }
 
-    return { result: AccessResult.GRANTED, workerId: snapshot?.workerId };
-  }
+    // The rules, unchanged: the first rule that fails decides the reason
+    private evaluate(ctx: AccessContext): AccessDecision {
+    for (const rule of this.rules) {
+        const reasonCode = rule.check(ctx);
+        if (reasonCode) {
+        return {
+            result: AccessResult.DENIED,
+            reasonCode,
+            workerId: ctx.snapshot?.workerId,
+        };
+        }
+    }
+    return { result: AccessResult.GRANTED, workerId: ctx.snapshot?.workerId };
+    }
 }
