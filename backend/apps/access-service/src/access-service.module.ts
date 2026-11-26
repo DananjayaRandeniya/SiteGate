@@ -10,6 +10,7 @@ import { WorkerSnapshotsModule } from './worker-snapshots/worker-snapshots.modul
 import { WorkerEventsController } from './events/worker-events.controller';
 import { DeadLetterService } from './events/dead-letter.service';
 import { ProcessedEventsModule } from './processed-events/processed-events.module';
+import { AccessRequestsModule } from './access-requests/access-requests.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { ProcessedEventsModule } from './processed-events/processed-events.modul
       }),
     }),
     WorkerSnapshotsModule,
-    ProcessedEventsModule
+    ProcessedEventsModule,
+    AccessRequestsModule
   ],
   controllers: [AccessServiceController, HealthController, WorkerEventsController],
   providers: [AccessServiceService, DeadLetterService],
