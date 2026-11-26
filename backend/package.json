@@ -19,7 +19,8 @@
     "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --inspect-brk --experimental-vm-modules -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --projects \"./apps/worker-service/test/jest-e2e.json\" \"./apps/access-service/test/jest-e2e.json\" \"./apps/audit-alert-service/test/jest-e2e.json\"",
-    "topics:create": "tsx scripts/create-topics.ts"
+    "topics:create": "tsx scripts/create-topics.ts",
+    "gate:tap": "tsx scripts/simulate-gate.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
