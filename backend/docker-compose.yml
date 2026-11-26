@@ -25,6 +25,18 @@ services:
       retries: 10
       start_period: 20s
 
+  kafka-init:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile
+    container_name: kafka-init
+    environment:
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -80,6 +92,8 @@ services:
         condition: service_healthy
       mongo:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   worker-service:
     profiles: ["worker"]
