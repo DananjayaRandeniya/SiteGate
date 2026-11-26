@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  WorkerSnapshot,
-  WorkerSnapshotDocument,
-} from './schemas/worker-snapshot.schema';
+import { WorkerSnapshot, WorkerSnapshotDocument } from './schemas/worker-snapshot.schema';
 
 @Injectable()
 export class WorkerSnapshotsRepository {

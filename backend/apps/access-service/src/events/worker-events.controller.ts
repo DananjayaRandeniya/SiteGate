@@ -1,15 +1,9 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { Topics, WorkerStatus } from '@app/contracts';
-import type { WorkerCreatedEvent } from '@app/contracts';
-import { WorkerSnapshotsRepository } from '../worker-snapshots/worker-snapshots.repository';
-import type {
-  CredentialIssuedEvent,
-  CredentialRevokedEvent,
-  WorkerDeactivatedEvent,
-  WorkerUpdatedEvent,
-} from '@app/contracts';
+import type { CredentialIssuedEvent, CredentialRevokedEvent, WorkerCreatedEvent, WorkerDeactivatedEvent, WorkerUpdatedEvent } from '@app/contracts';
 import type { WorkerSnapshot } from '../worker-snapshots/schemas/worker-snapshot.schema';
+import { WorkerSnapshotsRepository } from '../worker-snapshots/worker-snapshots.repository';
 import { DeadLetterService } from './dead-letter.service';
 
 @Controller()

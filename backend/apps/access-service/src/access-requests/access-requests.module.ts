@@ -9,9 +9,10 @@ import { TicketValidRule } from './rules/ticket-valid.rule';
 import { UnknownCredentialRule } from './rules/unknown-credential.rule';
 import { WorkerInactiveRule } from './rules/worker-inactive.rule';
 import { AccessLogModule } from '../access-log/access-log.module';
+import { EventPublisherModule } from '../events/event-publisher.module';
 
 @Module({
-  imports: [WorkerSnapshotsModule, AccessLogModule],
+  imports: [WorkerSnapshotsModule, AccessLogModule, EventPublisherModule],
   controllers: [AccessRequestsController],
   providers: [
     AccessDecisionService,

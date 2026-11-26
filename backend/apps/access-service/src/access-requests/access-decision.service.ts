@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { AccessResult } from '@app/contracts';
-import type { DenialReason } from '@app/contracts';
+import { AccessResult, Topics } from '@app/contracts';
+import type { AccessDeniedPayload, AccessGrantedPayload, DenialReason } from '@app/contracts';
 import { WorkerSnapshotsRepository } from '../worker-snapshots/worker-snapshots.repository';
 import type { AccessRequestDto } from './dto/access-request.dto';
 import type { AccessContext, AccessRule } from './rules/access-rule';
@@ -11,6 +11,7 @@ import { AssignedToSiteRule } from './rules/assigned-to-site.rule';
 import { InductionValidRule } from './rules/induction-valid.rule';
 import { TicketValidRule } from './rules/ticket-valid.rule';
 import { AccessLogRepository } from '../access-log/access-log.repository';
+import { EventPublisher } from '../events/event-publisher.service';
 
 export interface AccessDecision {
   result: AccessResult;
@@ -25,6 +26,7 @@ export class AccessDecisionService {
   constructor(
     private readonly snapshots: WorkerSnapshotsRepository,
     private readonly accessLog: AccessLogRepository,
+    private readonly publisher: EventPublisher,
     unknownCredential: UnknownCredentialRule,
     credentialRevoked: CredentialRevokedRule,
     workerInactive: WorkerInactiveRule,
@@ -57,6 +59,7 @@ export class AccessDecisionService {
         reasonCode: decision.reasonCode,
     });
 
+    await this.publishDecision(dto, decision);
     return decision;
     }
 
@@ -74,4 +77,26 @@ export class AccessDecisionService {
     }
     return { result: AccessResult.GRANTED, workerId: ctx.snapshot?.workerId };
     }
+
+  private async publishDecision(dto: AccessRequestDto, decision: AccessDecision) {
+    if (decision.result === AccessResult.GRANTED && decision.workerId) {
+        const payload: AccessGrantedPayload = {
+        credentialNumber: dto.credentialNumber,
+        workerId: decision.workerId,
+        siteId: dto.siteId,
+        gateId: dto.gateId,
+        direction: dto.direction,
+        };
+        await this.publisher.publish(Topics.ACCESS_GRANTED, dto.credentialNumber, payload);
+    } else if (decision.reasonCode) {
+        const payload: AccessDeniedPayload = {
+        credentialNumber: dto.credentialNumber,
+        workerId: decision.workerId, // missing for an unknown credential
+        siteId: dto.siteId,
+        gateId: dto.gateId,
+        reasonCode: decision.reasonCode,
+        };
+        await this.publisher.publish(Topics.ACCESS_DENIED, dto.credentialNumber, payload);
+    }
+    }    
 }
