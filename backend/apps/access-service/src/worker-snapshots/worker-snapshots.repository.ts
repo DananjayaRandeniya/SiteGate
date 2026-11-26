@@ -28,4 +28,8 @@ export class WorkerSnapshotsRepository {
       )
       .exec();
   }
+
+  findByWorkerIds(workerIds: string[]) {
+    return this.model.find({ workerId: { $in: workerIds } }).exec();
+  }
 }

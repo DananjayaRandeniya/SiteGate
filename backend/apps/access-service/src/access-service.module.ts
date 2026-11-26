@@ -11,6 +11,7 @@ import { WorkerEventsController } from './events/worker-events.controller';
 import { DeadLetterService } from './events/dead-letter.service';
 import { ProcessedEventsModule } from './processed-events/processed-events.module';
 import { AccessRequestsModule } from './access-requests/access-requests.module';
+import { OnSiteModule } from './on-site/on-site.module';
 
 @Module({
   imports: [
@@ -32,7 +33,8 @@ import { AccessRequestsModule } from './access-requests/access-requests.module';
     }),
     WorkerSnapshotsModule,
     ProcessedEventsModule,
-    AccessRequestsModule
+    AccessRequestsModule,
+    OnSiteModule
   ],
   controllers: [AccessServiceController, HealthController, WorkerEventsController],
   providers: [AccessServiceService, DeadLetterService],
