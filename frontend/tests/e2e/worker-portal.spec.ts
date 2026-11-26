@@ -185,9 +185,27 @@ test("Admin registers and manages a worker while Manager can only view", async (
         .click();
       await dialog.getByLabel("Reason").selectOption("LOST");
       await dialog.getByRole("button", { name: "Revoke credential" }).click();
-      await directory.getByRole("button", { name: "Issue credential" }).click();
-      await dialog.getByLabel("Credential number").fill("DEMO-004");
-      await dialog.getByRole("button", { name: "Issue credential" }).click();
+      const issueButton = directory.getByRole("button", {
+        name: "Issue credential",
+      });
+      await issueButton.focus();
+      await directory.keyboard.press("Enter");
+      const credential = dialog.getByLabel("Credential number");
+      await expect(credential).toBeFocused();
+      await directory.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(issueButton).toBeFocused();
+      await directory.keyboard.press("Enter");
+      await credential.fill("DEMO-001");
+      await directory.keyboard.press("Enter");
+      await expect(credential).toBeFocused();
+      await expect(credential).toHaveAttribute("aria-invalid", "true");
+      await expect(credential).toHaveAccessibleDescription(
+        "This credential is already in use",
+      );
+      await expect(credential).toHaveValue("DEMO-001");
+      await credential.fill("DEMO-004");
+      await directory.keyboard.press("Enter");
       await expect(
         directory.getByText("DEMO-004", { exact: true }),
       ).toBeVisible();
@@ -272,6 +290,12 @@ test("Admin registers and manages a worker while Manager can only view", async (
       expect(
         (await desktop.request.get(`${portal}/api${profile}`)).status(),
       ).toBe(404);
+      await directory.goto(portal + profile);
+      await expect(
+        directory.getByRole("heading", { name: "Worker not found" }),
+      ).toBeVisible();
+      await directory.getByRole("link", { name: "Back to workers" }).click();
+      await expect(directory).toHaveURL(`${portal}/workers`);
     });
   } finally {
     await Promise.all(contexts.map((context) => context.close()));

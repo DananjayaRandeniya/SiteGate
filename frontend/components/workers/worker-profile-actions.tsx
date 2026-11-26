@@ -53,6 +53,7 @@ export function WorkerProfileActions({
   const [action, setAction] = useState<Action | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [credentialError, setCredentialError] = useState("");
   const [saving, setSaving] = useState(false);
   const unassignedSites = demoWorkerSiteIds.filter(
     (site) => !worker.assignedSiteIds.includes(site),
@@ -66,17 +67,20 @@ export function WorkerProfileActions({
 
   function open(next: Action) {
     setError("");
+    setCredentialError("");
     setAction(next);
   }
 
   async function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!action || saving) return;
-    const fields = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const fields = new FormData(form);
     const value = (key: string) => String(fields.get(key) ?? "");
     const note = value("note").trim() || undefined;
     setSaving(true);
     setError("");
+    setCredentialError("");
     setMessage("");
     try {
       if (action === "edit") {
@@ -130,6 +134,18 @@ export function WorkerProfileActions({
       dialog.current?.close();
       router.refresh();
     } catch (failure) {
+      if (
+        action === "issue" &&
+        failure instanceof WorkerPortalApiError &&
+        failure.status === 409 &&
+        failure.details.code === "CREDENTIAL_IN_USE"
+      ) {
+        setCredentialError(failure.message);
+        form
+          .querySelector<HTMLInputElement>("#issue-worker-credential")
+          ?.focus();
+        return;
+      }
       setError(
         failure instanceof WorkerPortalApiError
           ? failure.message
@@ -300,11 +316,19 @@ export function WorkerProfileActions({
               <WorkerField
                 id="issue-worker-credential"
                 label="Credential number"
+                error={credentialError}
               >
                 <input
                   id="issue-worker-credential"
                   name="credentialNumber"
                   required
+                  aria-invalid={credentialError ? true : undefined}
+                  aria-describedby={
+                    credentialError
+                      ? "issue-worker-credential-error"
+                      : undefined
+                  }
+                  onChange={() => setCredentialError("")}
                   className={workerInputClass}
                 />
               </WorkerField>
