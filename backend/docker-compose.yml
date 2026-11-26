@@ -96,7 +96,7 @@ services:
         condition: service_completed_successfully
 
   worker-service:
-    profiles: ["worker"]
+    profiles: ["worker", "portal"]
     build:
       context: .
       dockerfile: apps/worker-service/Dockerfile
@@ -113,6 +113,44 @@ services:
       mongo:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+
+  access-service:
+    profiles: ["portal"]
+    build:
+      context: .
+      dockerfile: apps/access-service/Dockerfile
+    ports:
+      - "127.0.0.1:${ACCESS_HOST_PORT:-3002}:3002"
+    environment:
+      PORT: "3002"
+      MONGO_URI: mongodb://mongo:27017/access_db
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      mongo:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  web:
+    profiles: ["portal"]
+    build:
+      context: ../apps/web
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+    env_file:
+      - path: ../apps/web/.env
+        required: false
+    environment:
+      WORKER_SERVICE_URL: http://worker-service:3001
+      ACCESS_SERVICE_URL: http://access-service:3002
+      AUDIT_ALERT_SERVICE_URL: http://audit-alert-service:3003
+    depends_on:
+      worker-service:
+        condition: service_healthy
+      access-service:
+        condition: service_healthy
+      audit-alert-service:
         condition: service_healthy
 
 volumes:
