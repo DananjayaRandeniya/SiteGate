@@ -64,7 +64,14 @@ docker compose up -d kafka mongo kafka-ui mongo-express
 ```
 
 - Kafka UI: http://localhost:8080
-- Mongo Express: http://localhost:8081
+- Mongo Express: http://localhost:8081 (local development, no browser login)
+
+If an existing Mongo Express container asks for a password, recreate just that
+container from `backend`. This keeps MongoDB and its data volume running:
+
+```bash
+docker compose -p sitegate up -d --no-deps --force-recreate mongo-express
+```
 
 Stop everything with `docker compose down`.
 
