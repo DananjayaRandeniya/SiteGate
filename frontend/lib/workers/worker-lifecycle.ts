@@ -2,13 +2,13 @@ import { z } from "zod";
 import { workerRegistrationSchema } from "./worker-registration";
 import { workerIdSchema } from "./worker-schemas";
 
-const revokeReason = z.enum(["LOST", "STOLEN", "DAMAGED", "OTHER"]);
-const deactivationReason = z.enum([
-  "LEFT_COMPANY",
-  "SAFETY_BREACH",
-  "CONTRACT_ENDED",
-  "OTHER",
-]);
+const revokeReason = z.enum(["LOST", "STOLEN", "DAMAGED", "OTHER"], {
+  error: "Choose a revocation reason.",
+});
+const deactivationReason = z.enum(
+  ["LEFT_COMPANY", "SAFETY_BREACH", "CONTRACT_ENDED", "OTHER"],
+  { error: "Choose a deactivation reason." },
+);
 const optionalNote = z
   .string()
   .trim()

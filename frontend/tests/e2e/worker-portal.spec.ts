@@ -238,11 +238,43 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await directory.goto(phone.url());
       await directory.getByRole("button", { name: "Edit profile" }).click();
       const dialog = directory.getByRole("dialog");
-      await dialog.getByLabel("Full name").fill("Morgan Vale Updated");
+      const name = dialog.getByLabel("Full name");
+      const induction = dialog.getByLabel("Induction date");
+      const profilePath = `/api${new URL(directory.url()).pathname}`;
+      const submittedEdits: string[] = [];
+      directory.on("request", (incoming) => {
+        if (
+          incoming.method() === "PATCH" &&
+          new URL(incoming.url()).pathname === profilePath
+        ) {
+          submittedEdits.push(incoming.url());
+        }
+      });
+
+      await name.fill(" ");
+      await induction.fill(future);
+      await dialog.getByRole("button", { name: "Save changes" }).click();
+      await expect(name).toBeFocused();
+      await expect(name).toHaveAccessibleDescription(
+        "Enter the worker’s full name.",
+      );
+      await expect(induction).toHaveAccessibleDescription(
+        "Induction date must be today or earlier.",
+      );
+      await expect(dialog.getByLabel("Contractor")).toHaveValue(contractorId);
+      await expect(dialog.getByLabel("Safety ticket expiry")).toHaveValue(
+        expiry,
+      );
+      expect(submittedEdits).toHaveLength(0);
+
+      await name.fill("Morgan Vale Updated");
+      await expect(name).not.toHaveAttribute("aria-invalid", "true");
+      await induction.fill(inductionDate);
       await dialog.getByRole("button", { name: "Save changes" }).click();
       await expect(
         directory.getByRole("heading", { name: "Morgan Vale Updated" }),
       ).toBeVisible();
+      expect(submittedEdits).toHaveLength(1);
       await directory.screenshot({
         path: testInfo.outputPath("worker-review", "profile-desktop.png"),
         fullPage: true,

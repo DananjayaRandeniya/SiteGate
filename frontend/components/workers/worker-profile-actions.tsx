@@ -10,6 +10,7 @@ import {
   updateWorkerSchema,
 } from "@/lib/workers/worker-lifecycle";
 import {
+  getWorkerFieldErrors,
   submitCredentialIssue,
   submitCredentialRevocation,
   submitWorkerDeactivation,
@@ -53,7 +54,7 @@ export function WorkerProfileActions({
   const [action, setAction] = useState<Action | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [credentialError, setCredentialError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const unassignedSites = demoWorkerSiteIds.filter(
     (site) => !worker.assignedSiteIds.includes(site),
@@ -67,9 +68,37 @@ export function WorkerProfileActions({
 
   function open(next: Action) {
     setError("");
-    setCredentialError("");
+    setFieldErrors({});
     setAction(next);
   }
+
+  function field(name: string, label: string) {
+    const id = `worker-action-${name}`;
+    const message = fieldErrors[name];
+    return {
+      wrapper: { id, label, error: message },
+      control: {
+        id,
+        name,
+        className: workerInputClass,
+        "aria-invalid": message ? true : undefined,
+        "aria-describedby": message ? `${id}-error` : undefined,
+        onChange: () => {
+          if (message) {
+            setFieldErrors((current) => ({ ...current, [name]: "" }));
+          }
+        },
+      },
+    };
+  }
+  const fullNameField = field("fullName", "Full name");
+  const contractorField = field("contractorId", "Contractor");
+  const inductionField = field("inductionDate", "Induction date");
+  const ticketField = field("safetyTicketExpiry", "Safety ticket expiry");
+  const credentialField = field("credentialNumber", "Credential number");
+  const siteField = field("siteId", action === "assign" ? "Site ID" : "Site");
+  const reasonField = field("reason", "Reason");
+  const noteField = field("note", "Note (optional)");
 
   async function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,7 +109,7 @@ export function WorkerProfileActions({
     const note = value("note").trim() || undefined;
     setSaving(true);
     setError("");
-    setCredentialError("");
+    setFieldErrors({});
     setMessage("");
     try {
       if (action === "edit") {
@@ -134,16 +163,22 @@ export function WorkerProfileActions({
       dialog.current?.close();
       router.refresh();
     } catch (failure) {
-      if (
-        action === "issue" &&
-        failure instanceof WorkerPortalApiError &&
-        failure.status === 409 &&
-        failure.details.code === "CREDENTIAL_IN_USE"
-      ) {
-        setCredentialError(failure.message);
-        form
-          .querySelector<HTMLInputElement>("#issue-worker-credential")
-          ?.focus();
+      const errors = getWorkerFieldErrors(failure);
+      const invalid = Array.from(
+        form.querySelectorAll<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >("input[name], select[name], textarea[name]"),
+      ).flatMap((control) => {
+        const message = errors[control.name]?.[0];
+        return message ? [{ control, message }] : [];
+      });
+      if (invalid.length) {
+        setFieldErrors(
+          Object.fromEntries(
+            invalid.map(({ control, message }) => [control.name, message]),
+          ),
+        );
+        invalid[0].control.focus();
         return;
       }
       setError(
@@ -236,7 +271,7 @@ export function WorkerProfileActions({
         className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-auto rounded-panel border border-line bg-surface p-5 text-ink backdrop:bg-nav/45 sm:p-7"
       >
         {action && (
-          <form key={action} onSubmit={apply} className="grid gap-4">
+          <form key={action} onSubmit={apply} noValidate className="grid gap-4">
             <h2 id="worker-action-title" className="text-xl font-bold">
               {actionLabels[action]}
             </h2>
@@ -250,22 +285,18 @@ export function WorkerProfileActions({
             )}
             {action === "edit" && (
               <>
-                <WorkerField id="edit-worker-name" label="Full name">
+                <WorkerField {...fullNameField.wrapper}>
                   <input
-                    id="edit-worker-name"
-                    name="fullName"
+                    {...fullNameField.control}
                     defaultValue={worker.fullName}
                     required
-                    className={workerInputClass}
                   />
                 </WorkerField>
-                <WorkerField id="edit-worker-contractor" label="Contractor">
+                <WorkerField {...contractorField.wrapper}>
                   <select
-                    id="edit-worker-contractor"
-                    name="contractorId"
+                    {...contractorField.control}
                     defaultValue={worker.contractorId}
                     required
-                    className={workerInputClass}
                   >
                     {!contractors.some(
                       ({ id }) => id === worker.contractorId,
@@ -282,66 +313,38 @@ export function WorkerProfileActions({
                   </select>
                 </WorkerField>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <WorkerField
-                    id="edit-worker-induction"
-                    label="Induction date"
-                  >
+                  <WorkerField {...inductionField.wrapper}>
                     <input
-                      id="edit-worker-induction"
-                      name="inductionDate"
+                      {...inductionField.control}
                       type="date"
                       max={todayAtSite()}
                       defaultValue={worker.inductionDate}
                       required
-                      className={workerInputClass}
                     />
                   </WorkerField>
-                  <WorkerField
-                    id="edit-worker-ticket"
-                    label="Safety ticket expiry"
-                  >
+                  <WorkerField {...ticketField.wrapper}>
                     <input
-                      id="edit-worker-ticket"
-                      name="safetyTicketExpiry"
+                      {...ticketField.control}
                       type="date"
                       defaultValue={worker.safetyTicketExpiry}
                       required
-                      className={workerInputClass}
                     />
                   </WorkerField>
                 </div>
               </>
             )}
             {action === "issue" && (
-              <WorkerField
-                id="issue-worker-credential"
-                label="Credential number"
-                error={credentialError}
-              >
-                <input
-                  id="issue-worker-credential"
-                  name="credentialNumber"
-                  required
-                  aria-invalid={credentialError ? true : undefined}
-                  aria-describedby={
-                    credentialError
-                      ? "issue-worker-credential-error"
-                      : undefined
-                  }
-                  onChange={() => setCredentialError("")}
-                  className={workerInputClass}
-                />
+              <WorkerField {...credentialField.wrapper}>
+                <input {...credentialField.control} required />
               </WorkerField>
             )}
             {action === "assign" && (
-              <WorkerField id="worker-action-site" label="Site ID">
+              <WorkerField {...siteField.wrapper}>
                 <input
-                  id="worker-action-site"
-                  name="siteId"
+                  {...siteField.control}
                   list="worker-site-options"
                   placeholder="e.g. S-02"
                   required
-                  className={workerInputClass}
                 />
                 <datalist id="worker-site-options">
                   {unassignedSites.map((site) => (
@@ -351,14 +354,8 @@ export function WorkerProfileActions({
               </WorkerField>
             )}
             {action === "unassign" && (
-              <WorkerField id="worker-action-site" label="Site">
-                <select
-                  id="worker-action-site"
-                  name="siteId"
-                  className={workerInputClass}
-                  required
-                  defaultValue=""
-                >
+              <WorkerField {...siteField.wrapper}>
+                <select {...siteField.control} required defaultValue="">
                   <option value="">Choose a site</option>
                   {worker.assignedSiteIds.map((site) => (
                     <option key={site} value={site}>
@@ -381,14 +378,8 @@ export function WorkerProfileActions({
                     ? `Credential ${worker.credentialNumber} will stop working.`
                     : "The worker will lose site access."}
                 </p>
-                <WorkerField id="worker-action-reason" label="Reason">
-                  <select
-                    id="worker-action-reason"
-                    name="reason"
-                    required
-                    defaultValue=""
-                    className={workerInputClass}
-                  >
+                <WorkerField {...reasonField.wrapper}>
+                  <select {...reasonField.control} required defaultValue="">
                     <option value="">Choose a reason</option>
                     {action === "revoke" ? (
                       <>
@@ -406,13 +397,8 @@ export function WorkerProfileActions({
                     <option value="OTHER">Other</option>
                   </select>
                 </WorkerField>
-                <WorkerField id="worker-action-note" label="Note (optional)">
-                  <textarea
-                    id="worker-action-note"
-                    name="note"
-                    rows={3}
-                    className={workerInputClass}
-                  />
+                <WorkerField {...noteField.wrapper}>
+                  <textarea {...noteField.control} rows={3} />
                 </WorkerField>
               </>
             )}

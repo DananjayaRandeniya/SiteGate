@@ -37,6 +37,21 @@ export class WorkerPortalApiError extends Error {
   }
 }
 
+export function getWorkerFieldErrors(error: unknown): Record<string, string[]> {
+  if (error instanceof z.ZodError) {
+    return z.flattenError(error).fieldErrors;
+  }
+  if (!(error instanceof WorkerPortalApiError)) return {};
+  const { code, message, fieldErrors } = error.details;
+  if (error.status === 409 && code === "CREDENTIAL_IN_USE") {
+    return { credentialNumber: [message] };
+  }
+  if (error.status === 404 && code === "CONTRACTOR_NOT_FOUND") {
+    return { contractorId: [message] };
+  }
+  return fieldErrors ?? {};
+}
+
 type Submission = {
   method: "POST" | "PATCH" | "DELETE";
   body: unknown;

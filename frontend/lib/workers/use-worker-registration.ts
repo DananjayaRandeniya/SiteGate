@@ -6,6 +6,7 @@ import { useRef, type BaseSyntheticEvent } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import {
+  getWorkerFieldErrors,
   submitWorkerRegistration,
   WorkerPortalApiError,
 } from "./worker-portal-client";
@@ -41,39 +42,21 @@ export function useWorkerRegistration() {
         });
         return;
       }
-      const { code, fieldErrors, message } = error.details;
-      if (error.status === 409 && code === "CREDENTIAL_IN_USE") {
-        form.setError(
-          "credentialNumber",
-          { message: "This credential is already in use" },
-          { shouldFocus: true },
-        );
-        return;
-      }
-      if (error.status === 404 && code === "CONTRACTOR_NOT_FOUND") {
-        form.setError(
-          "contractorId",
-          { message: "Choose an active contractor." },
-          { shouldFocus: true },
-        );
-        return;
-      }
-      if (error.status === 400 && fieldErrors) {
-        let placed = false;
-        for (const [key, messages] of Object.entries(fieldErrors)) {
-          const field = registrationFields.safeParse(key);
-          if (field.success && messages[0]) {
-            form.setError(
-              field.data,
-              { message: messages[0] },
-              { shouldFocus: !placed },
-            );
-            placed = true;
-          }
+      let placed = false;
+      for (const [key, messages] of Object.entries(
+        getWorkerFieldErrors(error),
+      )) {
+        const field = registrationFields.safeParse(key);
+        if (field.success && messages[0]) {
+          form.setError(
+            field.data,
+            { message: messages[0] },
+            { shouldFocus: !placed },
+          );
+          placed = true;
         }
-        if (placed) return;
       }
-      form.setError("root", { message });
+      if (!placed) form.setError("root", { message: error.message });
       return;
     }
 
