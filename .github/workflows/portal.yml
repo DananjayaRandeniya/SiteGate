@@ -51,7 +51,9 @@ jobs:
       - name: Check the running portal and Worker Service connection
         run: |
           curl --fail --silent --show-error --max-time 10 http://localhost:3000/api/health
-          curl --fail --silent --show-error --max-time 10 http://localhost:3000/workers > /dev/null
+          curl --fail --silent --show-error --max-time 10 http://localhost:3000/login > /dev/null
+          status=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code} %{redirect_url}' http://localhost:3000/workers)
+          test "$status" = '307 http://localhost:3000/login'
           docker compose -f backend/docker-compose.yml exec -T web node --input-type=module - <<'NODE'
           import assert from "node:assert/strict";
           assert.ok(process.getuid() > 0);
