@@ -1,0 +1,20 @@
+# ---------- Stage 1: build (has all the tools) ----------
+FROM node:26-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npx nest build access-service
+
+# ---------- Stage 2: run (only what is needed) ----------
+FROM node:26-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+USER node
+EXPOSE 3002
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
+  CMD wget -qO- http://localhost:3002/health || exit 1
+CMD ["node", "dist/apps/access-service/main"]
