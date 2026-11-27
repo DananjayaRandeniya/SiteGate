@@ -36,7 +36,7 @@ async function seed(path: string, body: object): Promise<{ id: string }> {
 test("Admin registers and manages a worker while Manager can only view", async ({
   browser,
   request,
-}) => {
+}, testInfo) => {
   const { id: contractorId } = await seed("/contractors", {
     name: "Demo Build Co.",
   });
@@ -94,6 +94,10 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         directory.getByRole("table").getByRole("link", { name: "River Ellis" }),
       ).toBeVisible();
+      await directory.screenshot({
+        path: testInfo.outputPath("worker-review", "directory-desktop.png"),
+        fullPage: true,
+      });
       await directory
         .getByRole("searchbox", { name: "Search workers" })
         .fill("Avery");
@@ -119,6 +123,11 @@ test("Admin registers and manages a worker while Manager can only view", async (
     const phone = await mobile.newPage();
     await test.step("Validate and register a worker at phone width", async () => {
       await phone.goto(`${portal}/workers/new`);
+      await expect(phone.getByLabel("Full name")).toBeVisible();
+      await phone.screenshot({
+        path: testInfo.outputPath("worker-review", "registration-mobile.png"),
+        fullPage: true,
+      });
       await phone.getByLabel("Full name").fill("Morgan Vale");
       await phone
         .getByLabel("Contractor", { exact: true })
@@ -155,6 +164,13 @@ test("Admin registers and manages a worker while Manager can only view", async (
         contractorId,
       );
       await expect(phone.getByRole("checkbox", { name: "S-01" })).toBeChecked();
+      await phone.screenshot({
+        path: testInfo.outputPath(
+          "worker-review",
+          "duplicate-credential-mobile.png",
+        ),
+        fullPage: true,
+      });
       expect(
         await phone.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(390);
@@ -179,6 +195,10 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         directory.getByRole("heading", { name: "Morgan Vale Updated" }),
       ).toBeVisible();
+      await directory.screenshot({
+        path: testInfo.outputPath("worker-review", "profile-desktop.png"),
+        fullPage: true,
+      });
 
       await directory
         .getByRole("button", { name: "Revoke credential" })

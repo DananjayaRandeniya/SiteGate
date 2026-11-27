@@ -86,3 +86,10 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e:worker
+      - name: Share Worker screenshots for review
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker-portal-screenshots
+          path: frontend/test-results/**/worker-review/*.png
+          if-no-files-found: error
+          retention-days: 30
