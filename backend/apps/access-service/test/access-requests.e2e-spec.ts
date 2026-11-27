@@ -10,6 +10,7 @@ import type { AccessLogDocument } from '../src/access-log/schemas/access-log.sch
 import { AccessRequestsModule } from '../src/access-requests/access-requests.module';
 import { EventPublisher } from '../src/events/event-publisher.service';
 import { WorkerSnapshotsRepository } from '../src/worker-snapshots/worker-snapshots.repository';
+import { AllExceptionsFilter } from '../src/common/all-exceptions.filter';
 
 describe('POST /access-requests (e2e)', () => {
   let mongo: MongoMemoryServer;
@@ -38,6 +39,7 @@ describe('POST /access-requests (e2e)', () => {
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
+    app.useGlobalFilters(new AllExceptionsFilter());
     await app.init();
 
     accessLogModel = moduleRef.get(getModelToken(AccessLog.name), { strict: false });
@@ -92,11 +94,16 @@ describe('POST /access-requests (e2e)', () => {
     );
   });
 
-  it('rejects a request with a missing field (400)', async () => {
+  it('rejects a request with a missing field (400) in the standard error shape', async () => {
     const { gateId: _omit, ...withoutGate } = tap;
     const res = await request(app.getHttpServer()).post('/access-requests').send(withoutGate);
 
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(
+      expect.objectContaining({ statusCode: 400, code: 'VALIDATION_ERROR' }),
+    );
+    expect(res.body.correlationId).toBeDefined();
+    expect(res.body.timestamp).toBeDefined();
   });
 
   it('rejects unknown fields (400)', async () => {
