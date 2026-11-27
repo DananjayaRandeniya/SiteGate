@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 const portal = process.env.SITEGATE_E2E_PORTAL_URL;
 const workerService = process.env.WORKER_SERVICE_URL;
@@ -19,6 +19,55 @@ const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .slice(0, 10);
 const inductionDate = "2024-05-15";
+
+async function expectReadableText(target: Locator, pseudo?: "::placeholder") {
+  const ratio = await target.evaluate((element, pseudo) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not measure rendered text colors.");
+
+    const readLuminance = () => {
+      const [red, green, blue] = Array.from(
+        context.getImageData(0, 0, 1, 1).data.slice(0, 3),
+        (channel) => {
+          const srgb = channel / 255;
+          return srgb <= 0.04045
+            ? srgb / 12.92
+            : ((srgb + 0.055) / 1.055) ** 2.4;
+        },
+      );
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const backgrounds: string[] = [];
+    for (
+      let parent: Element | null = element;
+      parent;
+      parent = parent.parentElement
+    ) {
+      backgrounds.unshift(getComputedStyle(parent).backgroundColor);
+    }
+    context.fillStyle = "white";
+    context.fillRect(0, 0, 1, 1);
+    for (const color of backgrounds) {
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+    }
+    const background = readLuminance();
+    const foreground = getComputedStyle(element, pseudo);
+    context.globalAlpha = Number(foreground.opacity);
+    context.fillStyle = foreground.color;
+    context.fillRect(0, 0, 1, 1);
+    const text = readLuminance();
+    return (
+      (Math.max(text, background) + 0.05) / (Math.min(text, background) + 0.05)
+    );
+  }, pseudo);
+  expect(
+    ratio,
+    `Text contrast for ${target}${pseudo ?? ""}`,
+  ).toBeGreaterThanOrEqual(4.5);
+}
 
 async function seed(path: string, body: object): Promise<{ id: string }> {
   const reply = await fetch(workerService + path, {
@@ -94,6 +143,23 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         directory.getByRole("table").getByRole("link", { name: "River Ellis" }),
       ).toBeVisible();
+      await expectReadableText(
+        directory.getByPlaceholder("Name or credential"),
+        "::placeholder",
+      );
+      await expectReadableText(
+        directory.getByPlaceholder("All sites"),
+        "::placeholder",
+      );
+      await expectReadableText(
+        directory
+          .getByRole("table")
+          .getByText("Active", { exact: true })
+          .first(),
+      );
+      await expectReadableText(
+        directory.getByRole("button", { name: "Apply filters" }),
+      );
       await directory.screenshot({
         path: testInfo.outputPath("worker-review", "directory-desktop.png"),
         fullPage: true,
@@ -207,6 +273,9 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         phone.getByText("This credential is already in use", { exact: true }),
       ).toBeVisible();
+      await expectReadableText(
+        phone.getByText("This credential is already in use", { exact: true }),
+      );
       await expect(phone.getByLabel("Full name")).toHaveValue("Morgan Vale");
       await expect(phone.getByLabel("Contractor", { exact: true })).toHaveValue(
         contractorId,
@@ -228,6 +297,9 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         phone.getByText("Worker registered", { exact: true }),
       ).toBeVisible();
+      await expectReadableText(
+        phone.getByText("Worker registered", { exact: true }),
+      );
       await expect(
         phone.getByRole("heading", { name: "Morgan Vale" }),
       ).toBeVisible();
@@ -323,6 +395,10 @@ test("Admin registers and manages a worker while Manager can only view", async (
     await test.step("Assign and remove sites from the worker profile", async () => {
       const dialog = directory.getByRole("dialog");
       await directory.getByRole("button", { name: "Assign site" }).click();
+      await expectReadableText(
+        dialog.getByPlaceholder("e.g. S-02"),
+        "::placeholder",
+      );
       await dialog.getByLabel("Site ID").fill("S-02");
       await dialog.getByRole("button", { name: "Assign site" }).click();
       await expect(

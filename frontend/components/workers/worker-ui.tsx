@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const workerInputClass =
-  "min-h-11 w-full rounded-control border border-input-border bg-surface px-3 py-2 text-sm text-ink aria-invalid:border-danger";
+  "min-h-11 w-full rounded-control border border-input-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted placeholder:opacity-100 aria-invalid:border-danger";
 export const workerButtonClass =
   "inline-flex min-h-11 items-center justify-center rounded-control bg-brand px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60";
 export const workerSecondaryClass =
