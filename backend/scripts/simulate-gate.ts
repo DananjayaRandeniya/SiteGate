@@ -1,6 +1,8 @@
+/// <reference types="node" />
 // Simulates a gate tapping a card.
 // Usage: npx tsx scripts/simulate-gate.ts <credentialNumber> [siteId] [gateId] [ENTRY|EXIT] [count]
-/// <reference types="node" />
+// npm run gate:tap -- C-4001 S-02 G-01 ENTRY 3
+
 const [
   credentialNumber,
   siteId = 'S-01',
@@ -17,6 +19,8 @@ async function main() {
     process.exit(1);
   }
 
+  const durations: number[] = [];
+
   for (let i = 1; i <= Number(count); i++) {
     const started = Date.now();
     const res = await fetch(`${baseUrl}/access-requests`, {
@@ -25,7 +29,20 @@ async function main() {
       body: JSON.stringify({ credentialNumber, siteId, gateId, direction }),
     });
     const body = await res.json();
-    console.log(`#${i} HTTP ${res.status} ${JSON.stringify(body)} (${Date.now() - started} ms)`);
+    const ms = Date.now() - started;
+    durations.push(ms);
+
+    // Print every tap only for short runs
+    if (Number(count) <= 10) {
+      console.log(`#${i} HTTP ${res.status} ${JSON.stringify(body)} (${ms} ms)`);
+    }
+  }
+
+  if (durations.length > 1) {
+    const sorted = [...durations].sort((a, b) => a - b);
+    const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1];
+    const avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+    console.log(`${durations.length} taps: avg ${avg} ms, p95 ${p95} ms, max ${sorted[sorted.length - 1]} ms`);
   }
 }
 

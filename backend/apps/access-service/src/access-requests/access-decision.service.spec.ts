@@ -1,3 +1,5 @@
+// npm run test -- access-decision
+
 import { AccessResult, DenialReason, Direction, Topics, WorkerStatus } from '@app/contracts';
 import { AccessDecisionService } from './access-decision.service';
 import { AssignedToSiteRule } from './rules/assigned-to-site.rule';
