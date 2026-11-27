@@ -5,6 +5,7 @@ import {
   PortalNavigation,
   PortalSection,
 } from "@/components/portal-navigation";
+import { SiteGateBrand } from "@/components/sitegate-brand";
 import { getPortalRole } from "@/lib/auth/session";
 import { signOut } from "../(auth)/login/actions";
 
@@ -27,15 +28,9 @@ export default async function PortalLayout({
         <Link
           href="/"
           aria-label="SiteGate dashboard"
-          className="inline-flex w-fit items-center gap-2.5 text-[21px] font-bold text-white focus-visible:outline-accent"
+          className="inline-flex w-fit text-white focus-visible:outline-accent"
         >
-          <span
-            aria-hidden="true"
-            className="grid size-[34px] place-items-center rounded-control bg-accent text-sm text-ink"
-          >
-            SG
-          </span>
-          SiteGate
+          <SiteGateBrand />
         </Link>
         <PortalNavigation />
       </aside>

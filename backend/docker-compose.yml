@@ -117,7 +117,7 @@ services:
   access-service:
     build:
       context: .
-      dockerfile: apps/access-service/Dockerfile
+      dockerfile: apps/access-service/dockerfile
     container_name: access-service
     ports:
       - "3002:3002"
@@ -143,6 +143,8 @@ services:
         required: false
     environment:
       WORKER_SERVICE_URL: http://worker-service:3001
+      ACCESS_SERVICE_URL: http://access-service:3002
+      AUDIT_SERVICE_URL: http://audit-alert-service:3003
     depends_on:
       worker-service:
         condition: service_healthy
