@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const portal = process.env.SITEGATE_E2E_PORTAL_URL;
 const workerService = process.env.WORKER_SERVICE_URL;
@@ -19,6 +19,18 @@ const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .slice(0, 10);
 const inductionDate = "2024-05-15";
+
+async function tabTo(page: Page, target: Locator) {
+  for (let tab = 0; tab < 24; tab++) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(target).toBeFocused();
+}
 
 async function expectReadableText(target: Locator, pseudo?: "::placeholder") {
   const ratio = await target.evaluate((element, pseudo) => {
@@ -106,7 +118,10 @@ test("Admin registers and manages a worker while Manager can only view", async (
   expect((await request.get("/api/workers")).status()).toBe(401);
   const contexts = await Promise.all([
     browser.newContext({ viewport: { width: 1440, height: 960 } }),
-    browser.newContext({ viewport: { width: 390, height: 844 } }),
+    browser.newContext({
+      viewport: { width: 390, height: 844 },
+      locale: "en-US",
+    }),
     browser.newContext(),
   ]);
   const [desktop, mobile, readonly] = contexts;
@@ -473,6 +488,54 @@ test("Admin registers and manages a worker while Manager can only view", async (
       ).toBeVisible();
       await directory.getByRole("link", { name: "Back to workers" }).click();
       await expect(directory).toHaveURL(`${portal}/workers`);
+    });
+
+    await test.step("Register a worker at 390 px with the keyboard only", async () => {
+      await phone.goto(`${portal}/workers/new`);
+      const name = phone.getByLabel("Full name");
+      const contractor = phone.getByLabel("Contractor", { exact: true });
+      const credential = phone.getByLabel("Credential number");
+      const induction = phone.getByLabel("Induction date");
+      const ticket = phone.getByLabel("Safety ticket expiry");
+      const site = phone.getByRole("checkbox", { name: "S-01" });
+      const save = phone.getByRole("button", { name: "Save worker" });
+
+      await tabTo(phone, name);
+      await phone.keyboard.type("Keyboard Demo Worker");
+      await tabTo(phone, contractor);
+      await phone.keyboard.press("ArrowDown");
+      await expect(contractor).toHaveValue(contractorId);
+      await tabTo(phone, credential);
+      await phone.keyboard.type("DEMO-001");
+      await tabTo(phone, induction);
+      for (const digit of "05052024") await phone.keyboard.press(digit);
+      await expect(induction).toHaveValue("2024-05-05");
+      await tabTo(phone, ticket);
+      const expiryYear = expiry.slice(0, 4);
+      for (const digit of `0505${expiryYear}`)
+        await phone.keyboard.press(digit);
+      await expect(ticket).toHaveValue(`${expiryYear}-05-05`);
+      await tabTo(phone, site);
+      await phone.keyboard.press("Space");
+      await expect(site).toBeChecked();
+      await tabTo(phone, save);
+      await phone.keyboard.press("Enter");
+
+      await expect(credential).toBeFocused();
+      await expect(credential).toHaveAccessibleDescription(
+        "This credential is already in use",
+      );
+      await expect(name).toHaveValue("Keyboard Demo Worker");
+      await phone.keyboard.press("Control+a");
+      await phone.keyboard.type("DEMO-005");
+      await tabTo(phone, save);
+      await phone.keyboard.press("Enter");
+      await expect(
+        phone.getByRole("heading", { name: "Keyboard Demo Worker" }),
+      ).toBeVisible();
+      await expect(
+        phone.getByRole("status").filter({ hasText: "Worker registered" }),
+      ).toBeVisible();
     });
   } finally {
     await Promise.allSettled(contexts.map((context) => context.close()));
