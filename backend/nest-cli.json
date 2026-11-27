@@ -25,7 +25,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/audit-alert-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/audit-alert-service/tsconfig.app.json"
+        "tsConfigPath": "apps/audit-alert-service/tsconfig.app.json",
+        "plugins": ["@nestjs/swagger"]
       }
     },
     "contracts": {

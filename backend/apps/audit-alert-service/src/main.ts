@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AuditAlertServiceModule } from './audit-alert-service.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
@@ -14,6 +15,15 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Swagger
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('audit-alert-service')
+    .setDescription('Audit trail and alerts')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
 
   // Kafka side
   app.connectMicroservice<MicroserviceOptions>({
