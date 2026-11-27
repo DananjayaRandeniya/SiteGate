@@ -72,6 +72,11 @@ export function WorkerProfileActions({
     setAction(next);
   }
 
+  function close() {
+    dialog.current?.close();
+    setAction(null);
+  }
+
   function field(name: string, label: string) {
     const id = `worker-action-${name}`;
     const message = fieldErrors[name];
@@ -156,11 +161,11 @@ export function WorkerProfileActions({
         setMessage(action === "assign" ? "Site assigned." : "Site removed.");
       } else {
         await submitWorkerArchive(worker.id);
-        dialog.current?.close();
+        close();
         router.replace("/workers?archived=1");
         return;
       }
-      dialog.current?.close();
+      close();
       router.refresh();
     } catch (failure) {
       const errors = getWorkerFieldErrors(failure);
@@ -263,10 +268,10 @@ export function WorkerProfileActions({
       )}
       <dialog
         ref={dialog}
-        onClose={() => setAction(null)}
         aria-labelledby="worker-action-title"
         onCancel={(event) => {
-          if (saving) event.preventDefault();
+          event.preventDefault();
+          if (!saving) close();
         }}
         className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-auto rounded-panel border border-line bg-surface p-5 text-ink backdrop:bg-nav/45 sm:p-7"
       >
@@ -406,7 +411,7 @@ export function WorkerProfileActions({
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => dialog.current?.close()}
+                onClick={close}
                 className={workerSecondaryClass}
               >
                 Cancel

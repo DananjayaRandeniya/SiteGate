@@ -24,7 +24,7 @@ async function expectReadableText(target: Locator, pseudo?: "::placeholder") {
   const ratio = await target.evaluate((element, pseudo) => {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 1;
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) throw new Error("Could not measure rendered text colors.");
 
     const readLuminance = () => {
@@ -368,6 +368,7 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(dialog).toBeHidden();
       await expect(issueButton).toBeFocused();
       await directory.keyboard.press("Enter");
+      await expect(dialog).toBeVisible();
       await credential.fill("DEMO-001");
       await directory.keyboard.press("Enter");
       await expect(credential).toBeFocused();
@@ -474,6 +475,6 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(directory).toHaveURL(`${portal}/workers`);
     });
   } finally {
-    await Promise.all(contexts.map((context) => context.close()));
+    await Promise.allSettled(contexts.map((context) => context.close()));
   }
 });

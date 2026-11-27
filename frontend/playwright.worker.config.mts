@@ -6,6 +6,8 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   reporter: "list",
   use: {
+    actionTimeout: 10_000,
+    navigationTimeout: 15_000,
     baseURL: process.env.SITEGATE_E2E_PORTAL_URL,
     browserName: "chromium",
     launchOptions: { executablePath: process.env.SITEGATE_E2E_CHROMIUM },
