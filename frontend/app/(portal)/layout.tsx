@@ -1,11 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   PortalNavigation,
   PortalSection,
 } from "@/components/portal-navigation";
+import { getPortalRole } from "@/lib/auth/session";
+import { signOut } from "../(auth)/login/actions";
 
-export default function PortalLayout({ children }: { children: ReactNode }) {
+export default async function PortalLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const role = await getPortalRole();
+  if (!role) redirect("/login");
   return (
     <div className="min-h-screen md:grid md:grid-cols-[240px_minmax(0,1fr)]">
       <a
@@ -33,12 +42,15 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
       <div className="min-w-0">
         <header className="flex h-12 items-center justify-between gap-3 bg-surface px-4 text-xs text-muted md:h-[68px] md:px-8">
           <PortalSection />
-          <Link
-            href="/login"
-            className="min-w-fit font-semibold text-ink hover:underline"
-          >
-            Sign in
-          </Link>
+          <form action={signOut} className="flex items-center gap-3">
+            <span>Site {role}</span>
+            <button
+              type="submit"
+              className="min-h-11 min-w-fit font-semibold text-ink hover:underline"
+            >
+              Sign out
+            </button>
+          </form>
         </header>
         <main
           id="main"
