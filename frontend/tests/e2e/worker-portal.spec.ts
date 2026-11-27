@@ -121,6 +121,54 @@ test("Admin registers and manages a worker while Manager can only view", async (
     });
 
     const phone = await mobile.newPage();
+    await test.step("Keep filters and page position in the URL", async () => {
+      const filters = `limit=1&status=Active&contractorId=${contractorId}&siteId=S-01`;
+      await directory.goto(`${portal}/workers?${filters}`);
+      const pages = directory.getByRole("navigation", { name: "Worker pages" });
+      await expect(pages.getByText("2 workers · Page 1 of 2")).toBeVisible();
+      await expect(
+        directory.getByRole("table").getByRole("link", { name: "Avery Reed" }),
+      ).toBeVisible();
+      await pages.getByRole("link", { name: "Next" }).click();
+      await expect(pages.getByText("2 workers · Page 2 of 2")).toBeVisible();
+      const secondPage = new URL(directory.url());
+      expect(Object.fromEntries(secondPage.searchParams)).toMatchObject({
+        page: "2",
+        limit: "1",
+        status: "Active",
+        contractorId,
+        siteId: "S-01",
+      });
+      await expect(
+        directory.getByRole("table").getByRole("link", { name: "River Ellis" }),
+      ).toBeVisible();
+
+      await directory.goBack();
+      await expect(pages.getByText("2 workers · Page 1 of 2")).toBeVisible();
+      await directory.goForward();
+      await expect(pages.getByText("2 workers · Page 2 of 2")).toBeVisible();
+      await pages.getByRole("link", { name: "Previous" }).click();
+      await expect(pages.getByText("2 workers · Page 1 of 2")).toBeVisible();
+
+      await phone.goto(`${portal}/workers?${filters}&page=10`);
+      await expect(phone).toHaveURL(secondPage.href);
+      await expect(phone.getByRole("table")).toBeHidden();
+      await expect(
+        phone.getByRole("link", { name: "River Ellis" }),
+      ).toBeVisible();
+      await expect(phone.getByLabel("Site ID")).toHaveValue("S-01");
+      expect(
+        await phone.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(390);
+
+      await phone.getByLabel("Status").selectOption("Inactive");
+      await phone.getByRole("button", { name: "Apply filters" }).click();
+      await expect(
+        phone.getByRole("heading", { name: "No workers match your filters" }),
+      ).toBeVisible();
+      expect(new URL(phone.url()).searchParams.get("page")).toBe("1");
+    });
+
     await test.step("Validate and register a worker at phone width", async () => {
       await phone.goto(`${portal}/workers/new`);
       await expect(phone.getByLabel("Full name")).toBeVisible();

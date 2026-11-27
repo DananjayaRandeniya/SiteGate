@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { WorkerDirectoryFilters } from "@/components/workers/worker-directory-filters";
 import { WorkerRetry } from "@/components/workers/worker-retry";
@@ -71,6 +72,10 @@ export default async function WorkersPage({
     next.set("page", String(page));
     return `/workers?${next}`;
   };
+  const lastPage = Math.max(1, directory.totalPages);
+  if (directory.page > lastPage) {
+    redirect(pageHref(lastPage));
+  }
 
   return (
     <>
@@ -94,15 +99,9 @@ export default async function WorkersPage({
       />
       {directory.items.length === 0 ? (
         <WorkerNotice
-          title={
-            filtered
-              ? "No workers match your filters"
-              : directory.page > 1
-                ? "No workers on this page"
-                : "No workers yet"
-          }
+          title={filtered ? "No workers match your filters" : "No workers yet"}
         >
-          {directory.page > 1 || filtered ? (
+          {filtered ? (
             <Link href="/workers" className={workerSecondaryClass}>
               Clear filters
             </Link>
@@ -197,7 +196,7 @@ export default async function WorkersPage({
       >
         <p>
           {directory.total} {directory.total === 1 ? "worker" : "workers"} ·
-          Page {directory.page} of {Math.max(1, directory.totalPages)}
+          Page {directory.page} of {lastPage}
         </p>
         <div className="flex gap-2">
           {directory.page > 1 && (
