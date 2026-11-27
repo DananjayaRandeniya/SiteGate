@@ -18,6 +18,8 @@ const result = spawnSync(
     '-d',
     '--build',
     'web',
+    'access-service',
+    'audit-alert-service',
   ],
   {
     cwd: projectRoot,

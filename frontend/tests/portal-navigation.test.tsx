@@ -12,13 +12,15 @@ vi.mock("next/navigation", () => ({ usePathname: vi.fn() }));
 afterEach(cleanup);
 
 test.each([
+  ["/", "Dashboard", "Dashboard"],
   ["/workers", "Workers", "Workers"],
   ["/workers/new", "Workers", "Workers / Add worker"],
   ["/workers/worker-id", "Workers", "Workers / Profile"],
   ["/workers/worker-id/audit", "Audit", "Audit / Worker history"],
-  ["/sites/S-01/on-site", "Access", "Access / On site"],
-  ["/gates", "Access", "Access"],
-  ["/alerts", "Audit", "Audit"],
+  ["/sites/S-01/on-site", "On site", "Access / On site"],
+  ["/gates", "Gates", "Access"],
+  ["/alerts", "Alerts", "Alerts"],
+  ["/audit", "Audit", "Audit"],
 ])("marks the right section for %s", (path, section, location) => {
   vi.mocked(usePathname).mockReturnValue(path);
   render(

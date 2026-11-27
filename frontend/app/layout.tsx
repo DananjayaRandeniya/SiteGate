@@ -13,6 +13,7 @@ const inter = localFont({
 export const metadata: Metadata = {
   title: { default: "SiteGate", template: "%s | SiteGate" },
   description: "Manage workers, site access, and audit activity.",
+  icons: { icon: { url: "/sitegate-shield.png", type: "image/png" } },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
