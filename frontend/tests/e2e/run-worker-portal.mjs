@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
-import { cp, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, realpath, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
@@ -15,8 +15,6 @@ const preview = await mkdtemp(join(tempParent, "sitegate-worker-e2e-"));
 const project = `sitegate-worker-e2e-${randomBytes(6).toString("hex")}`;
 const secret = () => randomBytes(32).toString("base64url");
 const workerToken = secret();
-const adminSession = secret();
-const managerSession = secret();
 const interrupted = new AbortController();
 let next;
 
@@ -120,22 +118,6 @@ try {
     },
   });
 
-  // The fixture role exists only in this disposable portal build.
-  await writeFile(
-    join(preview, "lib/workers/worker-access.ts"),
-    `
-import "server-only";
-import { cookies } from "next/headers";
-
-export async function getWorkerPortalRole(): Promise<"Admin" | "Manager" | null> {
-  const session = (await cookies()).get("sitegate-worker-e2e")?.value;
-  if (session && session === process.env.SITEGATE_E2E_ADMIN_SESSION) return "Admin";
-  if (session && session === process.env.SITEGATE_E2E_MANAGER_SESSION) return "Manager";
-  return null;
-}
-`,
-  );
-
   console.log(
     "Building a disposable portal and starting isolated Worker containers.",
   );
@@ -170,8 +152,7 @@ export async function getWorkerPortalRole(): Promise<"Admin" | "Manager" | null>
     WORKER_SERVICE_URL: `http://${workerAddress}`,
     WORKER_ADMIN_TOKEN: workerToken,
     SITEGATE_E2E_PORTAL_URL: `http://127.0.0.1:${port}`,
-    SITEGATE_E2E_ADMIN_SESSION: adminSession,
-    SITEGATE_E2E_MANAGER_SESSION: managerSession,
+    SITEGATE_MOCK_SESSION_SECRET: secret(),
   };
   next = spawn(
     process.execPath,

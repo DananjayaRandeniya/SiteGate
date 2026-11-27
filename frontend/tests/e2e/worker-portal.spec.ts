@@ -3,10 +3,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 const portal = process.env.SITEGATE_E2E_PORTAL_URL;
 const workerService = process.env.WORKER_SERVICE_URL;
 const workerToken = process.env.WORKER_ADMIN_TOKEN;
-const admin = process.env.SITEGATE_E2E_ADMIN_SESSION;
-const manager = process.env.SITEGATE_E2E_MANAGER_SESSION;
 
-if (!portal || !workerService || !workerToken || !admin || !manager) {
+if (!portal || !workerService || !workerToken) {
   throw new Error(
     "Use npm run test:e2e:worker to start the isolated Worker stack.",
   );
@@ -19,6 +17,14 @@ const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .slice(0, 10);
 const inductionDate = "2024-05-15";
+
+async function signIn(page: Page, role: "Admin" | "Manager") {
+  await page.goto(`${portal}/workers`);
+  await expect(page).toHaveURL(`${portal}/login`);
+  await page.getByLabel("Role").selectOption(role);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText(`Site ${role}`, { exact: true })).toBeVisible();
+}
 
 async function tabTo(page: Page, target: Locator) {
   for (let tab = 0; tab < 24; tab++) {
@@ -126,33 +132,18 @@ test("Admin registers and manages a worker while Manager can only view", async (
   ]);
   const [desktop, mobile, readonly] = contexts;
   try {
-    await Promise.all([
-      desktop.addCookies([
-        {
-          name: "sitegate-worker-e2e",
-          value: admin,
-          url: portal,
-          httpOnly: true,
-        },
-      ]),
-      mobile.addCookies([
-        {
-          name: "sitegate-worker-e2e",
-          value: admin,
-          url: portal,
-          httpOnly: true,
-        },
-      ]),
-      readonly.addCookies([
-        {
-          name: "sitegate-worker-e2e",
-          value: manager,
-          url: portal,
-          httpOnly: true,
-        },
-      ]),
+    const [directory, phone, managerPage] = await Promise.all([
+      desktop.newPage(),
+      mobile.newPage(),
+      readonly.newPage(),
     ]);
-    const directory = await desktop.newPage();
+    await test.step("Sign in through the portal as Admin and Manager", async () => {
+      await Promise.all([
+        signIn(directory, "Admin"),
+        signIn(phone, "Admin"),
+        signIn(managerPage, "Manager"),
+      ]);
+    });
     await test.step("Filter the directory by a URL-backed search", async () => {
       await directory.goto(`${portal}/workers`);
       await expect(
@@ -201,7 +192,6 @@ test("Admin registers and manages a worker while Manager can only view", async (
       ).toBeVisible();
     });
 
-    const phone = await mobile.newPage();
     await test.step("Keep filters and page position in the URL", async () => {
       const filters = `limit=1&status=Active&contractorId=${contractorId}&siteId=S-01`;
       await directory.goto(`${portal}/workers?${filters}`);
@@ -427,7 +417,7 @@ test("Admin registers and manages a worker while Manager can only view", async (
     });
 
     await test.step("Confirm the Manager sees the profile but cannot change it", async () => {
-      const page = await readonly.newPage();
+      const page = managerPage;
       const profile = new URL(phone.url()).pathname;
       await page.goto(portal + profile);
       await expect(
@@ -458,6 +448,16 @@ test("Admin registers and manages a worker while Manager can only view", async (
       await expect(
         page.getByRole("heading", { name: "Admin access is required" }),
       ).toBeVisible();
+    });
+
+    await test.step("Sign out and confirm the Worker pages and API require sign-in again", async () => {
+      await managerPage.getByRole("button", { name: "Sign out" }).click();
+      await expect(managerPage).toHaveURL(`${portal}/login`);
+      expect(
+        (await readonly.request.get(`${portal}/api/workers`)).status(),
+      ).toBe(401);
+      await managerPage.goto(`${portal}/workers`);
+      await expect(managerPage).toHaveURL(`${portal}/login`);
     });
 
     await test.step("Confirm archive hides the worker from the directory and API", async () => {
