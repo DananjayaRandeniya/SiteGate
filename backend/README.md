@@ -66,4 +66,6 @@ docker compose up -d
 - Kafka UI: http://localhost:8080
 - Mongo Express: http://localhost:8081
 
+Create a WORKER_ADMIN_TOKEN into .env inside ./backend/apps/worker-service/src/.env
+
 Stop everything with `docker compose down`.
