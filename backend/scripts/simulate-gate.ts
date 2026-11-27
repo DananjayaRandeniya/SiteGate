@@ -1,6 +1,8 @@
 /// <reference types="node" />
 // Simulates a gate tapping a card.
 // Usage: npx tsx scripts/simulate-gate.ts <credentialNumber> [siteId] [gateId] [ENTRY|EXIT] [count]
+// npm run gate:tap -- C-4001 S-02 G-01 ENTRY 3
+
 const [
   credentialNumber,
   siteId = 'S-01',

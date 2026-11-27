@@ -1,3 +1,5 @@
+// node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./apps/access-service/test/jest-e2e.json
+
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
