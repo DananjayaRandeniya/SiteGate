@@ -1,0 +1,10 @@
+services:
+  worker-service:
+    environment:
+      WORKER_ADMIN_TOKEN: ${SITEGATE_TRAINING_WORKER_TOKEN:?Run the training startup command}
+  web:
+    environment:
+      SITEGATE_MOCK_SESSION_SECRET: ${SITEGATE_TRAINING_SESSION_SECRET:?Run the training startup command}
+      WORKER_ADMIN_TOKEN: ${SITEGATE_TRAINING_WORKER_TOKEN:?Run the training startup command}
+    ports: !override
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"

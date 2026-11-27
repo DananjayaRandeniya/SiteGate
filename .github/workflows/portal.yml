@@ -54,6 +54,8 @@ jobs:
           curl --fail --silent --show-error --max-time 10 http://localhost:3000/login > /dev/null
           status=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code} %{redirect_url}' http://localhost:3000/workers)
           test "$status" = '307 http://localhost:3000/login'
+          status=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' http://localhost:3000/api/workers)
+          test "$status" = 401
           docker compose -f backend/docker-compose.yml exec -T web node --input-type=module - <<'NODE'
           import assert from "node:assert/strict";
           assert.ok(process.getuid() > 0);
@@ -68,3 +70,28 @@ jobs:
       - name: Stop the test stack
         if: always()
         run: docker compose -f backend/docker-compose.yml down --volumes
+
+  worker-browser:
+    name: Test the Worker browser journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:worker
+      - name: Share Worker screenshots for review
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker-portal-screenshots
+          path: frontend/test-results/**/worker-review/*.png
+          if-no-files-found: error
+          retention-days: 30
